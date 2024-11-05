@@ -20,7 +20,7 @@ CHUNK_SIZE = 1000
 
 def load(path, usecols = None, nrows = None, index_col = None, verbose = False):
     """
-    Load the data from the file
+    Load the data from the file at the given path
 
     Parameters:
     path (str): the path to the file
@@ -50,15 +50,12 @@ def load_timeseries(usecols = None, nrows = None, verbose = False):
     Return:
     df (pd.DataFrame): the time series data
     """
-    
-    # Load the data
-    df_timeseries = load(TIMESERIES_PATH, usecols=usecols, nrows=nrows, verbose=verbose)
-
-    return df_timeseries
+    return load(TIMESERIES_PATH, usecols=usecols, nrows=nrows, verbose=verbose)
 
 def load_processed_timeseries(usecols = None, nrows = None, verbose = False):
     """
-    Load the processed time series data from the file
+    Load the processed time series data from the file,
+    saving the result in 'df_timeseries_en_processed.tsv'
 
     Parameters:
     usecols (list): the columns to load
@@ -67,11 +64,7 @@ def load_processed_timeseries(usecols = None, nrows = None, verbose = False):
     Return:
     df (pd.DataFrame): the processed time series data
     """
-
-    # Load the processed data
-    df_timeseries_processed = load(PROCESSED_TIMESERIES_PATH, usecols=usecols, nrows=nrows, index_col=['channel', 'week'], verbose=verbose)
-
-    return df_timeseries_processed
+    return load(PROCESSED_TIMESERIES_PATH, usecols=usecols, nrows=nrows, index_col=['channel', 'week'], verbose=verbose)
 
 def update_processed_timeseries(verbose = False):
     """
