@@ -1,12 +1,12 @@
 import numpy as np
 from tqdm import tqdm
 from time import time
-from datasets import load_timeseries, load, DATA_PATH
-from preprocessing import apply_timeseries_preprocessing
+from datasets import load_timeseries, load_metadata_helper, load, DATA_PATH
+from preprocessing import apply_complete_preprocessing
 import os.path
 
 # To get the path to data/ regardless of where this script is called from :
-PROCESSED_BAD_BUZZ_PATH = os.path.join(DATA_PATH, 'df_bb_timeseries_en_processed.tsv')
+PROCESSED_BAD_BUZZ_PATH = os.path.join(DATA_PATH, 'df_bb_data_en_processed.tsv')
 
 # The number of rows to load at once
 CHUNK_SIZE = 1000
@@ -124,6 +124,7 @@ def update_processed_bb_timeseries(verbose = False):
 
     #Load the entirety of the timeserie data
     df_timeseries_en = load_timeseries(verbose=verbose)
+    df_metadata_helper = load_metadata_helper(verbose=verbose)
     
     if verbose:
         print(f'Filtering...', end='\r')
@@ -135,7 +136,7 @@ def update_processed_bb_timeseries(verbose = False):
         print(f'Preprocessing...', end='\r')
 
     # Apply the preprocessing
-    df_bb_timeseries_en = apply_timeseries_preprocessing(df_bb_timeseries_en)
+    df_bb_timeseries_en = apply_complete_preprocessing(df_bb_timeseries_en, df_metadata_helper)
 
     if verbose:
         print('Filtering and preprocessing done:')

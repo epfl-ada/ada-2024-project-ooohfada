@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from time import time
-from preprocessing import apply_timeseries_preprocessing
+from preprocessing import apply_complete_preprocessing
 import os.path
 
 # To get the path to data/ regardless of where this script is called from :
@@ -13,7 +13,8 @@ DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file_
 
 # We can then get the paths to the data files
 TIMESERIES_PATH = os.path.join(DATA_PATH, 'df_timeseries_en.tsv')
-PROCESSED_TIMESERIES_PATH = os.path.join(DATA_PATH, 'df_timeseries_en_processed.tsv')
+PROCESSED_DATA_PATH = os.path.join(DATA_PATH, 'df_data_en_processed.tsv')
+METADATA_HELPER_PATH = os.path.join(DATA_PATH, 'yt_metadata_helper.feather')
 
 # The number of rows to load at once
 CHUNK_SIZE = 1000
@@ -39,6 +40,24 @@ def load(path, usecols = None, nrows = None, index_col = None, verbose = False):
     
     return df
 
+def load_feather(path, usecols = None, nrows = None, index_col = None, verbose = False):
+    """
+    Load the data from the feather file at the given path
+
+    Parameters:
+    path (str): the path to the file
+    usecols (list): the columns to load
+    nrows (int): the number of rows to load
+    verbose (bool): whether to print the progress
+    Return:
+    df (pd.DataFrame): the data
+    """
+    if verbose:
+        print(f'Loading data from \'{path}\'...')
+    df = pd.read_feather(path, columns=usecols)
+
+    return df
+
 def load_timeseries(usecols = None, nrows = None, verbose = False):
     """
     Load the time series data from the file
@@ -52,7 +71,20 @@ def load_timeseries(usecols = None, nrows = None, verbose = False):
     """
     return load(TIMESERIES_PATH, usecols=usecols, nrows=nrows, verbose=verbose)
 
-def load_processed_timeseries(usecols = None, nrows = None, verbose = False):
+def load_metadata_helper(usecols = None, nrows = None, verbose = False):
+    """
+    Load the metadata helper data from the file
+
+    Parameters:
+    usecols (list): the columns to load
+    nrows (int): the number of rows to load
+    verbose (bool): whether to print the progress
+    Return:
+    df (pd.DataFrame): the metadata helper data
+    """
+    return load_feather(METADATA_HELPER_PATH, usecols=usecols, nrows=nrows, verbose=verbose)
+
+def load_processed_data(usecols = None, nrows = None, verbose = False):
     """
     Load the processed time series data from the file,
     saving the result in 'df_timeseries_en_processed.tsv'
@@ -64,9 +96,9 @@ def load_processed_timeseries(usecols = None, nrows = None, verbose = False):
     Return:
     df (pd.DataFrame): the processed time series data
     """
-    return load(PROCESSED_TIMESERIES_PATH, usecols=usecols, nrows=nrows, index_col=['channel', 'week'], verbose=verbose)
+    return load(PROCESSED_DATA_PATH, usecols=usecols, nrows=nrows, index_col=['channel', 'week'], verbose=verbose)
 
-def update_processed_timeseries(verbose = False):
+def update_processed_data(verbose = False):
     """
     Update the processed time series data (can take around 5 minutes)
 
@@ -77,12 +109,13 @@ def update_processed_timeseries(verbose = False):
 
     # Load the raw data
     data = load_timeseries(verbose=verbose)
+    df_metadata_helper = load_metadata_helper(verbose=verbose)
 
     if verbose:
         print(f'Preprocessing...', end='\r')
 
     # Apply the preprocessing
-    data = apply_timeseries_preprocessing(data)
+    data = apply_complete_preprocessing(data, df_metadata_helper)
 
     if verbose:
         print('Preprocessing done:')
@@ -93,12 +126,16 @@ def update_processed_timeseries(verbose = False):
         chunks = np.array_split(data.index, 100) # split into 100 chunks
         for chunck, subset in enumerate(tqdm(chunks, desc='Saving data', total=len(chunks))):
             if chunck == 0: # first row
-                data.loc[subset].to_csv(PROCESSED_TIMESERIES_PATH, mode='w', index=True, sep='\t')
+                data.loc[subset].to_csv(PROCESSED_DATA_PATH, mode='w', index=True, sep='\t')
             else:
-                data.loc[subset].to_csv(PROCESSED_TIMESERIES_PATH, header=None, mode='a', index=True, sep='\t')
+                data.loc[subset].to_csv(PROCESSED_DATA_PATH, header=None, mode='a', index=True, sep='\t')
     else:
-        data.to_csv(PROCESSED_TIMESERIES_PATH, sep='\t', index=True)
+        data.to_csv(PROCESSED_DATA_PATH, sep='\t', index=True)
 
     if verbose:
         duration = time() - start_time
-        print(f'Processed time series data updated in \'{PROCESSED_TIMESERIES_PATH}\' in {duration:.2f}s')
+        print(f'Processed time series data updated in \'{PROCESSED_DATA_PATH}\' in {duration:.2f}s')
+
+
+update_processed_data(verbose=True)
+print(load_processed_data(verbose=True).head())
