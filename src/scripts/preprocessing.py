@@ -11,10 +11,15 @@ def apply_complete_preprocessing(df_timeseries, df_metadata_helper):
     df_preprocessed_data (pd.DataFrame): the preprocessed data, containing the preprocessed time series and metadata helper data
     """
     
+    # Apply the preprocessing to the time series and metadata helper data
     df_timeseries = apply_timeseries_preprocessing(df_timeseries)
     df_metadata_helper = apply_metadata_helper_preprocessing(df_metadata_helper)
 
+    # Merge the time series and metadata helper data
     df_preprocessed_data = df_timeseries.merge(df_metadata_helper, how='left', left_on=['channel', 'week'], right_on=['channel', 'week'])
+
+    # Set views, likes and dislikes to 0 if activity is 0
+    df_preprocessed_data.loc[df_preprocessed_data['activity'] == 0, ['view_count', 'like_count', 'dislike_count']] = 0
 
     return df_preprocessed_data
 
@@ -93,9 +98,18 @@ def map_column_to_week(df, column_name):
     Return:
     df_week (pd.DataFrame): the dataframe with the week index
     """
-    
+
     # Get the first date in the dataset
-    first_date = df[column_name].min()
+    if column_name == 'upload_date':
+        # The first date in the metadata is 2015-01-05, handle the time lag between the first date in metadata_helper and timeseries => keep only the data from 2015-01-05 (aligned with timeseries)
+        first_date = pd.to_datetime('2015-01-05 00:00:00')
+
+        # Drop all raws with upload_date before 2015-01-05
+        df = df[df['upload_date'] >= first_date]
+    else:
+        first_date = df[column_name].min()
+
+    print(first_date)
 
     # Compute the week index
     df['week'] = df[column_name].apply(lambda x: (x - first_date).days // 7)
