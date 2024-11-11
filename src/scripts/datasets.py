@@ -135,3 +135,7 @@ def update_processed_data(verbose = False):
     if verbose:
         duration = time() - start_time
         print(f'Processed time series data updated in \'{PROCESSED_DATA_PATH}\' in {duration:.2f}s')
+
+if __name__ == '__main__':
+    update_processed_data(verbose=True)
+    print(load_processed_data(verbose=True))
