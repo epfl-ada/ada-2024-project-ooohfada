@@ -131,12 +131,13 @@ def update_processed_bb_timeseries(verbose = False):
 
     # Filter the bad buzz channels
     df_bb_timeseries_en = df_timeseries_en[df_timeseries_en['channel'].isin(BAD_BUZZ_CHANNELS)]
+    df_bb_metadata_helper = df_metadata_helper[df_metadata_helper['channel_id'].isin(BAD_BUZZ_CHANNELS)]
 
     if verbose:
         print(f'Preprocessing...', end='\r')
 
     # Apply the preprocessing
-    df_bb_timeseries_en = apply_complete_preprocessing(df_bb_timeseries_en, df_metadata_helper)
+    df_bb_timeseries_en = apply_complete_preprocessing(df_bb_timeseries_en, df_bb_metadata_helper)
 
     if verbose:
         print('Filtering and preprocessing done:')
@@ -173,5 +174,4 @@ def load_bb_timeseries_processed(usecols = None, nrows = None, verbose = False):
 
 if __name__ == '__main__':
     update_processed_bb_timeseries(verbose=True)
-    print()
     print(load_bb_timeseries_processed(verbose=True).head())
