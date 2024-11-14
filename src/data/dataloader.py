@@ -114,44 +114,16 @@ def load_processed_data(usecols = None, nrows = None, verbose = False):
     """
     return load(PROCESSED_DATA_PATH, usecols=usecols, nrows=nrows, index_col=['channel', 'week'], verbose=verbose)
 
-def update_processed_data(verbose = False):
+def load_bb_timeseries_processed(usecols = None, nrows = None, verbose = False):
     """
-    Update the processed time series data (can take around 5 minutes)
+    Load the bad buzz df, preprocessed
 
-    Parameters:
+    Args:
+    usecols (list): the columns to load
+    nrows (int): the number of rows to load
     verbose (bool): whether to print the progress
+
+    Returns:
+    df: the Timeseries df
     """
-    start_time = time()
-
-    # Load the raw data
-    data = load_timeseries(verbose=verbose)
-    df_metadata_helper = load_metadata_helper(verbose=verbose)
-
-    if verbose:
-        print(f'Preprocessing...', end='\r')
-
-    # Apply the preprocessing
-    data = apply_complete_preprocessing(data, df_metadata_helper)
-
-    if verbose:
-        print('Preprocessing done:')
-        print(data.head())
-
-    # Save the processed data
-    if verbose:
-        chunks = np.array_split(data.index, 100) # split into 100 chunks
-        for chunck, subset in enumerate(tqdm(chunks, desc='Saving data', total=len(chunks))):
-            if chunck == 0: # first row
-                data.loc[subset].to_csv(PROCESSED_DATA_PATH, mode='w', index=True, sep='\t')
-            else:
-                data.loc[subset].to_csv(PROCESSED_DATA_PATH, header=None, mode='a', index=True, sep='\t')
-    else:
-        data.to_csv(PROCESSED_DATA_PATH, sep='\t', index=True)
-
-    if verbose:
-        duration = time() - start_time
-        print(f'Processed time series data updated in \'{PROCESSED_DATA_PATH}\' in {duration:.2f}s')
-
-if __name__ == '__main__':
-    update_processed_data(verbose=True)
-    print(load_processed_data(verbose=True))
+    return load(PROCESSED_BAD_BUZZ_PATH, usecols=usecols, nrows=nrows, index_col=['channel', 'week'], verbose=verbose)

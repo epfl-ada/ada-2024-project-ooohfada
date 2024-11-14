@@ -178,44 +178,44 @@ def count_views_likes_dislikes_per_week(df_metadata_helper):
     
     return df_likes_dislikes
 
-# Some tests to check the preprocessing
+
+def update_processed_data(verbose = False):
+    """
+    Update the processed time series data (can take around 5 minutes)
+
+    Parameters:
+    verbose (bool): whether to print the progress
+    """
+    start_time = time()
+
+    # Load the raw data
+    data = load_timeseries(verbose=verbose)
+    df_metadata_helper = load_metadata_helper(verbose=verbose)
+
+    if verbose:
+        print(f'Preprocessing...', end='\r')
+
+    # Apply the preprocessing
+    data = apply_complete_preprocessing(data, df_metadata_helper)
+
+    if verbose:
+        print('Preprocessing done:')
+        print(data.head())
+
+    # Save the processed data
+    if verbose:
+        chunks = np.array_split(data.index, 100) # split into 100 chunks
+        for chunck, subset in enumerate(tqdm(chunks, desc='Saving data', total=len(chunks))):
+            if chunck == 0: # first row
+                data.loc[subset].to_csv(PROCESSED_DATA_PATH, mode='w', index=True, sep='\t')
+            else:
+                data.loc[subset].to_csv(PROCESSED_DATA_PATH, header=None, mode='a', index=True, sep='\t')
+    else:
+        data.to_csv(PROCESSED_DATA_PATH, sep='\t', index=True)
+
+    if verbose:
+        duration = time() - start_time
+        print(f'Processed time series data updated in \'{PROCESSED_DATA_PATH}\' in {duration:.2f}s')
+
 if __name__ == '__main__':
-    timeseries_example = pd.DataFrame({
-        'datetime': ['2020-01-01', '2020-01-01', '2020-01-08', '2020-01-08'],
-        'channel': ['A', 'A', 'A', 'A'],
-        'category': ['Music', 'Music', 'Music', 'Music'],
-        'views': [100, 200, 320, 430],
-        'delta_views': [0, 0, 0, 0],
-        'subs': [10, 28, 40, 38],
-        'delta_subs': [0, 0, 0, 0],
-        'videos': [1, 2, 3, 5],
-        'delta_videos': [0, 1, 1, 2],
-        'activity': [1, 2, 3, 4],
-    })
-
-    metadata_helper_example = pd.DataFrame({
-        'upload_date': ['2020-01-01', '2020-01-01', '2020-01-08', '2020-01-08'],
-        'channel': ['A', 'A', 'A', 'A'],
-        'view_count': [100, 200, 320, 430],
-        'like_count': [10, 20, 30, 40],
-        'dislike_count': [1, 5, 10, 20],
-        'categories': ['Music', 'Music', 'Music', 'Music'],
-        'crawl_date': ['2020-01-01', '2020-01-01', '2020-01-08', '2020-01-08'],
-        'display_id': ['1', '2', '3', '4'],
-        'duration': [1, 2, 3, 5],
-    })
-
-    print("Before preprocessing:")
-    print('\nTimeseries:')
-    print(timeseries_example)
-    print('\nMetadata helper:')
-    print(metadata_helper_example)
-
-    print("\nAfter preprocessing:")
-    print('\nTimeseries:')
-    print(apply_timeseries_preprocessing(timeseries_example))
-    print('\nMetadata helper:')
-    print(apply_metadata_helper_preprocessing(metadata_helper_example))
-    print('\nComplete preprocessing:')
-    print(apply_complete_preprocessing(timeseries_example, metadata_helper_example))
-    
+    update_processed_data()

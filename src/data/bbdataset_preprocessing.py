@@ -158,20 +158,5 @@ def update_processed_bb_timeseries(verbose = False):
         duration = time() - start_time
         print(f'Processed bad buzz time series data updated in \'{PROCESSED_BAD_BUZZ_PATH}\' in {duration:.2f}s')
 
-def load_bb_timeseries_processed(usecols = None, nrows = None, verbose = False):
-    """
-    Load the bad buzz df, preprocessed
-
-    Args:
-    usecols (list): the columns to load
-    nrows (int): the number of rows to load
-    verbose (bool): whether to print the progress
-
-    Returns:
-    df: the Timeseries df
-    """
-    return load(PROCESSED_BAD_BUZZ_PATH, usecols=usecols, nrows=nrows, index_col=['channel', 'week'], verbose=verbose)
-
 if __name__ == '__main__':
     update_processed_bb_timeseries(verbose=True)
-    print(load_bb_timeseries_processed(verbose=True).head())
