@@ -1,8 +1,10 @@
  # Buzz, bust, and bounce-back: data-driven strategy to deal with YouTubers’ decline
 
+<img src="https://img.asmedia.epimg.net/resizer/v2/AJQDQ4CTRRBADO5WDUJKAWFQ4A.jpg?auth=837e1df88c498b395f03b131702fa0bbb45d38d28f176a23950c3f61a588b2d9&width=360&height=203&smart=true" alt="not stonks" width="700"/>
+
 ## Abstract
 
-In this project, we take on the role of community managers helping a YouTuber recover from a recent popularity crisis. May it be from a big controversy or a simple popularity struggle, our goal is to develop a data-driven strategy for navigating the aftermath of public disinterest using insights from YouTube’s ecosystem. Drawing on patterns from previous YouTuber experiences, we’ll analyse key metrics— such as channel type, initial popularity, creator’s perceived integrity—to offer tailored strategies for re-engagement. Should they change their posting strategy ? Wait a specific period before posting new content? In case of big controversies, should they issue an apology video? Our recommendations will not be based on the cause of their decline but on the optimal tactics for handling its impact.
+In this project, we take on the role of community managers helping a YouTuber recover from a recent popularity crisis. May it be from a big controversy or a simple popularity decline, our goal is to develop a data-driven strategy for navigating the aftermath of public disinterest using insights from YouTube’s ecosystem. Drawing on patterns from previous YouTuber experiences, we’ll analyse key metrics— such as channel type, initial popularity, posting frequency—to offer tailored strategies for re-engagement. Should they change their posting strategy ? Wait a specific period before posting new content? In case of big controversies, should they issue an apology video? Our recommendations will not be based on the cause of their decline but on optimal tactics for handling its impact.
 
 Our motivation stems from the rapid spread of online backlash, which impacts creators on YouTube and other platforms. We aim to provide practical insights for creators facing a decline, helping them make informed decisions about their next steps to rebuild audience trust or strategically embrace controversy if advantageous.
 
@@ -15,7 +17,8 @@ Our motivation stems from the rapid spread of online backlash, which impacts cre
 
 ## Methods
 
-The main objective of our P2 was to explore our dataset and programmatically detect what a “viewership decline" is. To do so, we used the following methods: 
+We chose not to explore another dataset, considering the size of YouNiverse. 
+We used the following methods: 
 
 ### Before any data exploration, preprocessing of the used dataframes in the Youniverse dataset
 
@@ -35,16 +38,22 @@ To do so, we followed the below process:
     - First attempt: look for losses of subs, as we assumed that it was the general consequence of a bad buzz. We were able to conclude that a Youtube channel will rarely ‘lose’ subscribers due to the increasing traffic on the platform.
     - Second attempt: we used reduction or stagnation of growth coefficient of subscribers. We were able to graphically compare the delta subs to the rolling growth average of the growth coefficient and determine the moments where both diverged. 
 
-However, the bad buzz dataset containing only around 40 Youtubers, we were afraid that it would not allow us to pursue ML techniques like regression, … and actually have coherent data to base our analysis on. Therefore, we made the decision to open up our subject and tackle “viewership decline’’ instead of only big controversy. This particular topic will be tackled in a separate alternative discussion in our P3. After creating a new dataset with only the data name of new dataset from channels that underwent a popularity struggle, we performed numerous exploration processes on this newly made dataset, containing now only Youtube channels that underwent a persistent decline (state number of weeks acceptable for threshold) using the following techniques: 
-- method 1
-- method 2
+However, the bad buzz dataset containing only around 40 Youtubers, we were afraid that it would not allow us to pursue ML techniques (regression, mapping..). Therefore, we made the decision to open up our subject and tackle “viewership decline" instead of only big controversy, which will be tackled in a separate alternative discussion in P3. 
 
+The following analysis was performed on the dataset, to prepare for P3:  
+- General and visual overview of the whole dataset through the prism of viewership declines
+- For each decline in growth, observe around those timestamps what was happening concerning like/ratios, views, activities (number of posted videos) to see if any correlation could be found (using p-values...), which could lead to a pertinent ML analysis. 
 
 
 ### LLMs
-To enrich our analysis and in the aim of using an on-device LLM to analyse the metadata of videos that follow a popularity crisis and detect ###TODO NICOLAS###, we started the processing of video metadata. To make the file usable, we split it into smaller chunks, got rid of the columns that we do not plan on using and then preprocessed them by indexing by [“week”, “channel”], deleting the rows that contained NaNs. In the file ###TODO NICO###, we kept track of what channel appeared in each chunk to make their use easier.
-LLMs will be used to detect potential apology videos in the alternative discussion about bad buzz. On a broader aspect, it will also be used ……
+In the aim of using an on-device LLM to analyse the metadata of videos that follow a popularity crisis, we applied a special treatment to the large `yt_metadata_en.json` dataset, since it contains the title and description of all crawled videos. To make it usable, we:
+- split it into smaller, handable chunks
+- got rid of the unneeded columns
+- preprocessed them by indexing by [“channel”, “week”] 
+- deleted the rows that contained missing values. 
+- kept track of what channel appeared in each chunk in `channel_chunk_dict.json` to make them more accessible.
 
+Videos title and description will be used as input to the LLM to detect potential apology videos in the alternative discussion about bad buzz. On a broader aspect, it will also be used to identify potential similarities between videos from channels which recovered from popularity decrease and others that did not manage to do so.
 
 ## Proposed timeline and organisation within the team
 
@@ -53,9 +62,11 @@ LLMs will be used to detect potential apology videos in the alternative discussi
 2. Identify/create the metrics that characterise the channel’s popularity (magnitude, time scale) => used for recovery level after a fall down. (Eva + Martina + Pauline)
 3. Identify the behaviour/reaction from the channel metrics to differentiate channels which failed to recover from those that managed to recover. (Nathan + Nicolas)
 ### Week 2 (25/11 - 01/12)
-4. Matched observational study using propensity score to find out which factors have the greatest impact on recovery. (All since it is a crucial part)
+4. Matched observational study using propensity score to find out which factors have the greatest impact on recovery. (Nathan + Pauline)
+5. Perform a regression of the recovery level on channels' aftermath reactions (Martina + Nicolas + Eva)
 ### Week 3 (02/12 - 08/12)
-5. Perform a regression of the recovery level on the channel’s reaction (All since it is a crucial part)
+6. Look for patterns among reactions that led to recovery (Nicolas + Martina + Eva)
+7. Focus on the alternative discussion on bad buzzes : use the LLM to find apologies and study their impact, determining if and when it is profitable to post them, study the interesting case of Jake Paul... (Nathan + Pauline)
 ### Week 4/5 (09/12 - 19/12)
-6. Data story and repository finalization (All but we don't know the repartition)
-
+8. Create an interactive quiz (suggesting reactions based on profile) to make the results of our study more accessible and fun (Pauline)
+9. Data story and repository finalization (All)
