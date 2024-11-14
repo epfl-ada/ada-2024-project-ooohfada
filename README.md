@@ -4,16 +4,16 @@
 
 ## Abstract
 
-In this project, we take on the role of community managers helping a YouTuber recover from a recent popularity crisis. May it be from a big controversy or a simple popularity decline, our goal is to develop a data-driven strategy for navigating the aftermath of public disinterest using insights from YouTube’s ecosystem. Drawing on patterns from previous YouTuber experiences, we’ll analyse key metrics— such as channel type, initial popularity, posting frequency—to offer tailored strategies for re-engagement. Should they change their posting strategy ? Wait a specific period before posting new content? In case of big controversies, should they issue an apology video? Our recommendations will not be based on the cause of their decline but on optimal tactics for handling its impact.
+In this project, we take on the role of **community managers** helping a YouTuber recover from a recent popularity crisis. May it be from a big controversy or a simple popularity decline, our goal is to **develop a data-driven strategy for navigating the aftermath of public disinterest using insights from YouTube’s ecosystem**. Drawing on patterns from previous YouTuber experiences, we’ll analyse key metrics— such as channel type, initial popularity, posting frequency—to offer tailored strategies for re-engagement. Should they change their posting strategy ? Wait a specific period before posting new content? In case of big controversies, should they issue an apology video? Our recommendations will not be based on the cause of their decline but on optimal tactics for handling its impact.
 
-Our motivation stems from the spread of online backlash, impacting creators on YouTube and other platforms. We aim to provide practical insights for creators facing a decline, helping them make informed decisions about their next steps to rebuild audience trust or strategically embrace controversy if advantageous.
+Our motivation stems from the spread of **online backlash**, impacting creators on YouTube and other platforms. We aim to provide practical insights for creators facing a **decline**, helping them make informed decisions about their next steps to rebuild audience trust or strategically embrace controversy if advantageous.
 
 ## Research Questions
 
-- How do we define decline for Youtubers ? 
-- Is a Youtube channel category affecting the effective response strategies after a decline?
-- What timing and content strategies are best for re-engagement following public backlash?
-- In the exact case of a ‘bad buzz’, how to define it using Youtuber statistics? Are apology videos really useful ? 
+- **How do we define decline for Youtubers ?** 
+- **Is a Youtube channel category affecting the effective response strategies after a decline?**
+- **What timing and content strategies are best for re-engagement following public backlash?**
+- **In the exact case of a ‘bad buzz’, how to define it using Youtuber statistics? Are apology videos really useful?**
 
 ## Methods
 
@@ -29,31 +29,31 @@ Although the provided dataset was already cleaned, we found some heterogeneity i
 
 ### Manipulation of the dataset, and discovery analysis
 
-Initially, we had in mind to explore and mathematically detect ‘bad buzz’ or controversy only. 
+Initially, we had in mind to explore and mathematically detect **‘bad buzz’** or controversy only. 
 
 To do so, we followed the below process:
 
-- Creation of a dataset containing only known Youtube channels that underwent a bad buzz: `df_bb_timeseries_en.tsv`.
+- Creation of a dataset containing **only known Youtube channels that underwent a bad buzz**: `df_bb_timeseries_en.tsv`.
 - Qualify what a ‘bad buzz’ is from data, and see if we could map the date of their bad buzz to specific data points.
-    - First attempt: look for losses of subs, as we assumed that it was the general consequence of a bad buzz. We were able to conclude that a Youtube channel will rarely ‘lose’ subscribers due to the increasing traffic on the platform.
-    - Second attempt: we used reduction or stagnation of growth coefficient of subscribers. We were able to graphically compare the delta subs to the rolling growth average of the growth coefficient and determine the moments where both diverged. 
+    - __First attempt__: look for losses of subs, as we assumed that it was the general consequence of a bad buzz. We were able to conclude that a Youtube channel will rarely ‘lose’ subscribers due to the increasing traffic on the platform.
+    - __Second attempt__: we used reduction or stagnation of growth coefficient of subscribers. We were able to graphically compare the delta subs to the rolling growth average of the growth coefficient and determine the moments where both diverged. 
 
-However, the bad buzz dataset containing only around 40 Youtubers, we were afraid that it would not allow us to pursue ML techniques (regression, mapping..). Therefore, we made the decision to open up our subject and tackle “viewership decline" instead of only big controversy, which will be tackled in a separate alternative discussion in P3. 
+However, the bad buzz dataset containing only around 40 Youtubers, we were afraid that it would not allow us to pursue ML techniques (regression, mapping..). Therefore, we made the decision to open up our subject and tackle **“viewership decline"** instead of only big controversy, which will be tackled in a separate alternative discussion in P3. 
 
 The following analysis was performed on the dataset, to prepare for P3:  
-- General and visual overview of the whole dataset through the prism of viewership declines
+- General and **visual overview** of the whole dataset through the prism of viewership declines
 - For each decline in growth, observe around those timestamps what was happening concerning like/ratios, views, activities (number of posted videos) to see if any correlation could be found (using p-values...), which could lead to a pertinent ML analysis. 
 
 
 ### LLMs
-In the aim of using an on-device LLM to analyse the metadata of videos that follow a popularity crisis, we applied a special treatment to the large `yt_metadata_en.json` dataset, since it contains the title and description of all crawled videos. To make it usable, we:
+In the aim of using an **on-device LLM** to analyse the metadata of videos that follow a popularity crisis, we applied a special treatment to the large `yt_metadata_en.json` dataset, since it contains the title and description of all crawled videos. To make it usable, we:
 - split it into smaller, handable chunks
 - got rid of the unneeded columns
 - preprocessed them by indexing by [“channel”, “week”] 
 - deleted the rows that contained missing values. 
 - kept track of what channel appeared in each chunk in `channel_chunk_dict.json` to make them more accessible.
 
-Videos title and description will be used as input to the LLM to detect potential apology videos in the alternative discussion about bad buzz. On a broader aspect, it will also be used to identify potential similarities between videos from channels which recovered from popularity decrease and others that did not manage to do so.
+Videos title and description will be used as input to the LLM to detect potential **apology videos** in the alternative discussion about bad buzz. On a broader aspect, it will also be used to identify potential similarities between videos from channels which recovered from popularity decrease and others that did not manage to do so.
 
 ## Proposed timeline and organisation within the team
 
