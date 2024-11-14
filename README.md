@@ -6,7 +6,7 @@
 
 In this project, we take on the role of community managers helping a YouTuber recover from a recent popularity crisis. May it be from a big controversy or a simple popularity decline, our goal is to develop a data-driven strategy for navigating the aftermath of public disinterest using insights from YouTube’s ecosystem. Drawing on patterns from previous YouTuber experiences, we’ll analyse key metrics— such as channel type, initial popularity, posting frequency—to offer tailored strategies for re-engagement. Should they change their posting strategy ? Wait a specific period before posting new content? In case of big controversies, should they issue an apology video? Our recommendations will not be based on the cause of their decline but on optimal tactics for handling its impact.
 
-Our motivation stems from the rapid spread of online backlash, which impacts creators on YouTube and other platforms. We aim to provide practical insights for creators facing a decline, helping them make informed decisions about their next steps to rebuild audience trust or strategically embrace controversy if advantageous.
+Our motivation stems from the spread of online backlash, impacting creators on YouTube and other platforms. We aim to provide practical insights for creators facing a decline, helping them make informed decisions about their next steps to rebuild audience trust or strategically embrace controversy if advantageous.
 
 ## Research Questions
 
@@ -22,7 +22,7 @@ We used the following methods:
 
 ### Before any data exploration, preprocessing of the used dataframes in the Youniverse dataset
 
-Although the provided dataset was already cleaned, we found that there was some heterogeneity in the dates that needed to be fixed : the sample rate is not constant and some dates are different by a few hours or a few days. To solve this: 
+Although the provided dataset was already cleaned, we found some heterogeneity in the dates that needed to be fixed : the sample rate is not constant and some dates are different by a few hours or a few days. To solve this: 
 - Use of ‘week indexes’ in df_timeseries_en.tsv and `yt_metadata_en.json`. 
 - Since delta_views and delta_subs are never negative even when a decrease occurs (before preprocessing, they are 0 in this case), we replaced those columns with the deltas computed from the values directly
 - Augmented the time-series with the sum of likes, dislikes and views (found in yt_metadata_helper.feather) of the videos that were uploaded during the week associated with each datapoint. It is important to keep in mind that the likes, dislikes and views of the videos were all sampled in 2019 when comparing two different weeks : a recent video might have less views than an older one but still be more popular. 
