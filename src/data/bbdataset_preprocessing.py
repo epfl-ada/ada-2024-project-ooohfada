@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from time import time
-from dataloader import load_timeseries, load_metadata_helper, load, DATA_PATH
+from dataloader_functions import load_timeseries, load_metadata_helper, load, DATA_PATH
 from preprocessing import apply_complete_preprocessing
 import os.path
 

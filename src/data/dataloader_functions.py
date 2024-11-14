@@ -15,6 +15,7 @@ DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file_
 TIMESERIES_PATH = os.path.join(DATA_PATH, 'df_timeseries_en.tsv')
 PROCESSED_DATA_PATH = os.path.join(DATA_PATH, 'df_data_en_processed.tsv')
 METADATA_HELPER_PATH = os.path.join(DATA_PATH, 'yt_metadata_helper.feather')
+PROCESSED_BAD_BUZZ_PATH = os.path.join(DATA_PATH, 'df_bb_data_en_processed.tsv')
 
 # The number of rows to load at once
 CHUNK_SIZE = 1000

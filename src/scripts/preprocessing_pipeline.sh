@@ -10,5 +10,6 @@ echo "Running the preprocessing pipeline"
 
 python data/preprocessing.py # Run the data loader
 python data/bbdataset_preprocessing.py # Run the data loader
+python data/reduce_metadata.py # Run the metadata reducer
 
 deactivate # Deactivate the virtual environment
