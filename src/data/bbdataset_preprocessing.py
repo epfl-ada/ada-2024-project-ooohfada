@@ -1,25 +1,18 @@
-import pandas as pd
 import numpy as np
+from tqdm import tqdm
+from time import time
+from dataloader import load_timeseries, load_metadata_helper, load, DATA_PATH
+from preprocessing import apply_complete_preprocessing
+import os.path
 
+# To get the path to data/ regardless of where this script is called from :
+PROCESSED_BAD_BUZZ_PATH = os.path.join(DATA_PATH, 'df_bb_data_en_processed.tsv')
 
-def load_timeseries_data(usecols = None):
-    """Load the initial Timeseries df
+# The number of rows to load at once
+CHUNK_SIZE = 1000
 
-    Args:
-        usecols (df_colulns, optional): Selection of wanted columns to load. Defaults to None.
-
-    Returns:
-        df: the Timeseries df
-    """    
-    return pd.read_csv('data/df_timeseries_en.tsv', sep='\t', compression = 'infer', usecols = usecols)
-
-def timeseries_bb_selection():
-    """Keep only the bad buzz, determined using various documentation, see README with Addition of the literal name of the channel
-    """    
-    #Load the entirety of the timeserie data
-    df_timeseries_en = load_timeseries_data()
-
-    badbuzz_channels = ['UCEHf6KUY7Zw7hlXQ7hDemwQ', #tmartn
+ # List of the bad buzz channels
+BAD_BUZZ_CHANNELS = ['UCEHf6KUY7Zw7hlXQ7hDemwQ', #tmartn
                         'UCnEn0EUV13IR-_TK7fiIp3g', #AlfieDeyes
                         'UCV9_KinVpV-snHe3C3n1hvA', #ShaneDawson
                         'UClWD8su9Sk6GzZDwy9zs3_w', #TanaMongeau
@@ -27,26 +20,26 @@ def timeseries_bb_selection():
                         'UC0v-tlzsn0QZwJnkiaUSJVQ', #TheFineBros
                         'UCX6OQ3DkcsbYNE6H8uQQuVA', #LoganPaul
                         'UC-lHJZR3Gqxm24_Vd_AJ5Yw', #PewDiePie
-                        'UC1KPy3cAAj0i0RIFC_SzjMg',  # VitalyZdoorovetskiy
-                        'UC11PvrGPzo6Y7Zc6-e9cAKg', #KeemStar (Drama Alert)
-                        'UC4USoIAL9qcsx5nCZV_QRnA',  # ContentCop
+                        'UC1Q9JKC7S8GzYdtp4vkqkcA', #VitalyZdoorovetskiy
+                        'UCl0MsYaBUplB7VwEry901og', #KeemStar (Drama Alert)
+                        'UC4sEmXUuWIFlxRIFBRV6VXQ', #ContentCop
                         'UCoiIt_v1D-6z75LmrdIU2aw', #NikocadoAvocado
-                        'UCDo9msNItILnyF_Y2eHaNQg', #Ricegum
+                        'UCm1hYxe9Ztst7Dzh3W_1flg', #Ricegum
                         'UCucot-Zp428OwkyRm2I7v2Q', #JamesCharles
-                        'UCkvK_5omS-42Ovgah8KRKtg', #JeffreeStar
+                        'UCu2rmC8OXrf-R5DdLG68dKw', #JeffreeStar
                         'UCVtFOytbRpEvzLjvqGG5gxQ', #KSI
                         'UCdJdEguB1F1CiYe7OEi3SBg', #JonTronShow
-                        'UCE7faqz-mqjbUa4UaMZGAvw',  # NicoleArbour
+                        'UC7Tq0KZSgtwCh6NcrfnRHvQ', #NicoleArbour
                         'UC4qk9TtGhBKCkoWz5qGJcGg', #TatiWestbrook
                         'UCVJK2AT3ea5RTXNRjX_kz8A', #TobyTurner
                         'UCXhSCMRRPyxSoyLSPFxK7VA', #MatthewSantoro
-                        'UC8lV8KIVWvfsaqOi_d3Wu3w',  # DaddyOFive #deleted  UC8lV8KIVWvfsaqOi_d3Wu3w
+                        'UC8lV8KIVWvfsaqOi_d3Wu3w', #DaddyOFive #deleted
                         'UCzKc6JrWSt_67UpEYIefrJQ', #MarinaJoyce
                         'UCxJf49T4iTO_jtzWX3rW_jg', #LeafyIsHere #deleted
                         'UC2e0bNZ6CzT-Xvr070VaGsw', #ProJared
                         'UC_DptbqTndVt_Im3KkuIK5Q', #KianAndJC
                         'UCAq9s3QQVCDMvg1iWQBVtxQ', #SamandNia
-                        'UCg5rY7_sfwepQJ5Fg1VmZPA', #AustinJones  UCg5rY7_sfwepQJ5Fg1VmZPA
+                        'UCg5rY7_sfwepQJ5Fg1VmZPA', #AustinJones
                         'UC1r4VtVE__5K6c_L_3Vlxxg', #FouseyTube
                         'UCy_YiQx1t8oOgz74QIB4Jrw', #Myka Stauffer
                         'UCtVubfONoPpn4kNuuZ1h6iQ', #EugeniaConey
@@ -63,16 +56,14 @@ def timeseries_bb_selection():
                         'UCKMugoa0uHpjUuq14yOpagw', #LauraLee
                         'UCZ__vn_T9SK44jcM85rnt4A', #PrankInvasion
                         'UCzJIliq68IHSn-Kwgjeg2AQ', #JackieAina
-                        'UC-QZWTOtdsm6CNPHUR88irA',  # N&AProductions
+                        'UCFIHxULKUBYdU7ZkZh_5p1g', #N&AProductions
                         'UCj2HtBTppiQLVrZfEjcFxig', #SevenSuperGirls
-                        'UCTfiNvrrwuhJjyGuUjH_kEg', #InvisibleChildren
-                        ]   
-    df_bb_timeseries_en = df_timeseries_en[df_timeseries_en['channel'].isin(badbuzz_channels)]
+                        'UC6hUgRphnVoS7x-XkErFZxQ', #InvisibleChildren
+                        ] 
 
-    #Create a new column with the name of the Youtuber for simplification purpose during analysis
-
-    channel_map = {
-                         'UCEHf6KUY7Zw7hlXQ7hDemwQ': 'tmartn',
+# To be used in notebooks
+CHANNEL_NAMES = {
+                        'UCEHf6KUY7Zw7hlXQ7hDemwQ': 'tmartn',
                         'UCnEn0EUV13IR-_TK7fiIp3g' : 'AlfieDeyes',
                         'UCV9_KinVpV-snHe3C3n1hvA' : 'ShaneDawson', 
                         'UClWD8su9Sk6GzZDwy9zs3_w' : 'TanaMongeau',
@@ -80,16 +71,16 @@ def timeseries_bb_selection():
                         'UC0v-tlzsn0QZwJnkiaUSJVQ' : 'TheFineBros',
                         'UCX6OQ3DkcsbYNE6H8uQQuVA' : 'LoganPaul',
                         'UC-lHJZR3Gqxm24_Vd_AJ5Yw' : 'PewDiePie',
-                        'UC1KPy3cAAj0i0RIFC_SzjMg' : 'VitalyZdoorovetskiy',
-                        'UC11PvrGPzo6Y7Zc6-e9cAKg': 'KeemStar (Drama Alert)',
-                        'UC4USoIAL9qcsx5nCZV_QRnA' : 'ContentCop',
+                        'UC1Q9JKC7S8GzYdtp4vkqkcA' : 'VitalyZdoorovetskiy',
+                        'UCl0MsYaBUplB7VwEry901og' : 'KeemStar (Drama Alert)',
+                        'UC4sEmXUuWIFlxRIFBRV6VXQ' : 'ContentCop',
                         'UCoiIt_v1D-6z75LmrdIU2aw' : 'NikocadoAvocado',
-                        'UCDo9msNItILnyF_Y2eHaNQg': 'Ricegum',
+                        'UCm1hYxe9Ztst7Dzh3W_1flg' : 'Ricegum',
                         'UCucot-Zp428OwkyRm2I7v2Q' : 'JamesCharles',
-                        'UCkvK_5omS-42Ovgah8KRKtg' : 'JeffreeStar',
+                        'UCu2rmC8OXrf-R5DdLG68dKw' : 'JeffreeStar',
                         'UCVtFOytbRpEvzLjvqGG5gxQ' : 'KSI',
                         'UCdJdEguB1F1CiYe7OEi3SBg' : 'JonTronShow',
-                        'UCE7faqz-mqjbUa4UaMZGAvw' : 'NicoleArbour',
+                        'UC7Tq0KZSgtwCh6NcrfnRHvQ' : 'NicoleArbour',
                         'UC4qk9TtGhBKCkoWz5qGJcGg' : 'TatiWestbrook',
                         'UCVJK2AT3ea5RTXNRjX_kz8A' : 'TobyTurner',
                         'UCXhSCMRRPyxSoyLSPFxK7VA' : 'MatthewSantoro',
@@ -116,30 +107,71 @@ def timeseries_bb_selection():
                         'UCKMugoa0uHpjUuq14yOpagw' : 'LauraLee', 
                         'UCZ__vn_T9SK44jcM85rnt4A' : 'PrankInvasion',
                         'UCzJIliq68IHSn-Kwgjeg2AQ' : 'JackieAina', 
-                        'UC-QZWTOtdsm6CNPHUR88irA' : 'N&AProductions',
+                        'UCFIHxULKUBYdU7ZkZh_5p1g' : 'N&AProductions',
                         'UCj2HtBTppiQLVrZfEjcFxig' : 'SevenSuperGirls',
-                        'UCTfiNvrrwuhJjyGuUjH_kEg' : 'InvisibleChildren'
+                        'UC6hUgRphnVoS7x-XkErFZxQ' : 'InvisibleChildren'
     }
 
-    #Mapping between name and id of channels
-    df_bb_timeseries_en['channel_name'] = df_bb_timeseries_en['channel'].map(channel_map)
-    print(df_bb_timeseries_en['channel_name'].nunique())
+def update_processed_bb_timeseries(verbose = False):
+    """
+    Update the processed bad buzz time series data by filtering the bad buzz channels and processing the data,
+    saving the result in 'df_bb_timeseries_en_processed.tsv'
 
-    # Save into a tsv file the 'bad buzz' dataset
-    df_bb_timeseries_en.to_csv('data/df_bb_timeseries_en.tsv', sep='\t', index=False)
+    Parameters:
+    verbose (bool): whether to print the progress
+    """
+    start_time = time()
 
+    #Load the entirety of the timeserie data
+    df_timeseries_en = load_timeseries(verbose=verbose)
+    df_metadata_helper = load_metadata_helper(verbose=verbose)
+    
+    if verbose:
+        print(f'Filtering...', end='\r')
 
-def load_bb_timeseries_data(usecols = None):
-    """Load the bad buzz df 
+    # Filter the bad buzz channels
+    df_bb_timeseries_en = df_timeseries_en[df_timeseries_en['channel'].isin(BAD_BUZZ_CHANNELS)]
+    df_bb_metadata_helper = df_metadata_helper[df_metadata_helper['channel_id'].isin(BAD_BUZZ_CHANNELS)]
+
+    if verbose:
+        print(f'Preprocessing...', end='\r')
+
+    # Apply the preprocessing
+    df_bb_timeseries_en = apply_complete_preprocessing(df_bb_timeseries_en, df_bb_metadata_helper)
+
+    if verbose:
+        print('Filtering and preprocessing done:')
+        print(df_bb_timeseries_en.head())
+
+        # Save the processed data
+    if verbose:
+        chunks = np.array_split(df_bb_timeseries_en.index, 100) # split into 100 chunks
+        for chunck, subset in enumerate(tqdm(chunks, desc='Saving data', total=len(chunks))):
+            if chunck == 0: # first row
+                df_bb_timeseries_en.loc[subset].to_csv(PROCESSED_BAD_BUZZ_PATH, mode='w', index=True, sep='\t')
+            else:
+                df_bb_timeseries_en.loc[subset].to_csv(PROCESSED_BAD_BUZZ_PATH, header=None, mode='a', index=True, sep='\t')
+    else:
+        df_bb_timeseries_en.to_csv(PROCESSED_BAD_BUZZ_PATH, sep='\t', index=True)
+
+    if verbose:
+        duration = time() - start_time
+        print(f'Processed bad buzz time series data updated in \'{PROCESSED_BAD_BUZZ_PATH}\' in {duration:.2f}s')
+
+def load_bb_timeseries_processed(usecols = None, nrows = None, verbose = False):
+    """
+    Load the bad buzz df, preprocessed
 
     Args:
-        usecols (df_columns, optional):  Selection of wanted columns to load. Defaults to None.
+    usecols (list): the columns to load
+    nrows (int): the number of rows to load
+    verbose (bool): whether to print the progress
 
     Returns:
-        df: the Timeseries df
+    df: the Timeseries df
     """
-    return pd.read_csv('data/df_bb_timeseries_en.tsv', sep='\t', compression = 'infer', usecols = usecols)
+    return load(PROCESSED_BAD_BUZZ_PATH, usecols=usecols, nrows=nrows, index_col=['channel', 'week'], verbose=verbose)
 
-
-timeseries_bb_selection()
-
+if __name__ == '__main__':
+    update_processed_bb_timeseries(verbose=True)
+    print(load_bb_timeseries_processed(verbose=True).head())

@@ -73,11 +73,16 @@ def apology_in_week(channel_id, week_index, n=None):
     n (int): The number of videos to check
     """
 
+    # TODO: find the n next videos title and description of the channel starting from the week_index, from chunks
+    title = 'title'
+    description = 'description'
+
     apology_found = False
 
     for i in range(n):
-        response = apology_video()
+        response = apology_video(title, description)
         if response == True:
+            print(f'Apology video found in {i}th video after the week {week_index}')
             apology_found = True
             break
     

@@ -19,6 +19,22 @@ METADATA_HELPER_PATH = os.path.join(DATA_PATH, 'yt_metadata_helper.feather')
 # The number of rows to load at once
 CHUNK_SIZE = 1000
 
+def load_raw_data(filename, n_first_rows):
+    """
+    Load the raw data from the given file and return the first n_first_rows
+    Parameters:
+    filename (str): the name of the file to load
+    n_first_rows (int): the number of rows to load
+    Return:
+    df (pd.DataFrame): the first n_first_rows of the file
+    """
+    
+    df_timeseries = pd.read_csv(f'./../../data/{filename}', sep='\t', compression='infer', nrows=n_first_rows)
+    df_timeseries['datetime'] = pd.to_datetime(df_timeseries['datetime'])
+
+    return df_timeseries
+
+
 def load(path, usecols = None, nrows = None, index_col = None, verbose = False):
     """
     Load the data from the file at the given path
