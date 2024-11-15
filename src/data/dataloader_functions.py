@@ -2,13 +2,12 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from time import time
-from preprocessing import apply_complete_preprocessing
 import os.path
 
 # To get the path to data/ regardless of where this script is called from :
 
 # Given that data is two directories up from this file, 
-# we need to go up two directories from this file to get to the data directory
+# Need to go up two directories from this file to get to the data directory
 DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
 
 # We can then get the paths to the data files

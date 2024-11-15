@@ -1,4 +1,20 @@
 import pandas as pd
+import numpy as np
+from tqdm import tqdm
+from time import time
+import os.path
+
+from dataloader_functions import *
+
+# To get the path to data/ regardless of where this script is called from :
+
+# Given that data is two directories up from this file, 
+# Need to go up two directories from this file to get to the data directory
+DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
+
+# We can then get the paths to the data files
+PROCESSED_DATA_PATH = os.path.join(DATA_PATH, 'df_data_en_processed.tsv')
+
 
 def apply_complete_preprocessing(df_timeseries, df_metadata_helper):
     """
@@ -200,7 +216,6 @@ def update_processed_data(verbose = False):
 
     if verbose:
         print('Preprocessing done:')
-        print(data.head())
 
     # Save the processed data
     if verbose:
@@ -218,4 +233,4 @@ def update_processed_data(verbose = False):
         print(f'Processed time series data updated in \'{PROCESSED_DATA_PATH}\' in {duration:.2f}s')
 
 if __name__ == '__main__':
-    update_processed_data()
+    update_processed_data(verbose=True)

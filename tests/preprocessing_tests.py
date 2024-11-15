@@ -1,3 +1,7 @@
+import pandas as pd
+
+from ..src.data.preprocessing import *
+
 # Some tests to check the preprocessing
 if __name__ == '__main__':
     timeseries_example = pd.DataFrame({

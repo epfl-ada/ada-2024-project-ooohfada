@@ -14,7 +14,7 @@ def week_index_to_date(week_index):
     base_date = datetime.datetime(2015, 1, 5)
     
     # Calculate the date by adding the number of weeks to the base date
-    target_date = base_date + datetime.timedelta(weeks=week_index)
+    target_date = base_date + datetime.timedelta(weeks=int(week_index))
     
     return target_date
 

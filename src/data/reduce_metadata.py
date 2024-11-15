@@ -10,17 +10,18 @@ import os
 
 from preprocessing import map_column_to_week
 
-# Set up variables
-file_path = 'yt_metadata_en.jsonl'
-chunk_size = 10_000_000
-columns = ['channel_id', 'upload_date', 'title', 'description']
-output_folder = 'chunks'
-
-# Create the output folder if it doesn't exist
-os.makedirs(output_folder, exist_ok=True)
-
 # Function to process each chunk and save it as a CSV
 def save_as_chunk(file_path, start_line, end_line, chunk_index, columns):
+    """
+    Save a chunk of the data as a CSV file
+    
+    Parameters:
+    file_path (str): Path to the file
+    start_line (int): Start line of the chunk
+    end_line (int): End line of the chunk
+    chunk_index (int): Index of the chunk
+    columns (list): List of columns to keep
+    """
     processed_data = []
     with open(file_path, 'r') as file:
         # Skip to the start line
@@ -46,26 +47,6 @@ def save_as_chunk(file_path, start_line, end_line, chunk_index, columns):
     df_chunk.to_csv(output_path, index=False)
     print(f"Saved chunk {chunk_index} to {output_path}")
     del df_chunk  # Free up memory
-
-# Loop through the file and process each chunk (0 to 5)
-chunk_index = 0
-start_line = 0
-
-for chunk_index in range(0, 6):
-    end_line = start_line + chunk_size
-    save_as_chunk(file_path, start_line, end_line, chunk_index, columns)
-    start_line = end_line
-
-# Process the last chunk (all remaining values)
-chunk_index = 6
-start_line = 60_000_001
-
-chunk_size = 12_924_794
-
-end_line = start_line + chunk_size
-save_as_chunk(file_path, start_line, end_line, chunk_index, columns) 
-
-# Chunks processing
 
 def process_chunk(file_path, chunk_index):
     """
@@ -109,26 +90,53 @@ def process_chunk(file_path, chunk_index):
 
     return contained_channels
 
-# Create a dictionary for the chunk index for each channel
-channel_chunk_dict = {}
+if __name__ == '__main__':
+    # Set up variables
+    file_path = 'yt_metadata_en.jsonl'
+    chunk_size = 10_000_000
+    columns = ['channel_id', 'upload_date', 'title', 'description']
+    output_folder = 'chunks'
 
-# Perform the preprocessing on all chunks
-for i in range(0, 7):
-    contained_channels = process_chunk(f'../../data/chunks/chunk_{i}.csv', i)
-    # Update the dictionary with the new chunk index for each channel
-    for channel in contained_channels:
-        if channel in channel_chunk_dict:
-            # Handle the case where a channel is present in multiple chunks
-            print(f"Channel {channel} is present in multiple chunks")
-            # Special index for channels present in multiple chunks
-            # E.g. 10 for a channel present in chunk 1 and 0, 21 for a channel present in chunk 2 and 1, 32 for a channel present in chunk 3 and 2 etc...
-            special_index = i*10 + (i-1)
-            channel_chunk_dict.update({channel: special_index})
-        else :
-            channel_chunk_dict.update({channel: i})
+    # Create the output folder if it doesn't exist
+    os.makedirs(output_folder, exist_ok=True)
 
-# Save the dictionary to a file
-with open('../../data/channel_chunk_dict.json', 'w') as file:
-    json.dump(channel_chunk_dict, file)
-    
-print("Dictionary saved to file")
+    # Loop through the file and process each chunk (0 to 5)
+    chunk_index = 0
+    start_line = 0
+
+    for chunk_index in range(0, 6):
+        end_line = start_line + chunk_size
+        save_as_chunk(file_path, start_line, end_line, chunk_index, columns)
+        start_line = end_line
+
+    # Process the last chunk (all remaining values)
+    chunk_index = 6
+    start_line = 60_000_001
+    chunk_size = 12_924_794
+
+    end_line = start_line + chunk_size
+    save_as_chunk(file_path, start_line, end_line, chunk_index, columns) 
+
+    # Create a dictionary for the chunk index for each channel
+    channel_chunk_dict = {}
+
+    # Perform the preprocessing on all chunks
+    for i in range(0, 7):
+        contained_channels = process_chunk(f'../../data/chunks/chunk_{i}.csv', i)
+        # Update the dictionary with the new chunk index for each channel
+        for channel in contained_channels:
+            if channel in channel_chunk_dict:
+                # Handle the case where a channel is present in multiple chunks
+                print(f"Channel {channel} is present in multiple chunks")
+                # Special index for channels present in multiple chunks
+                # E.g. 10 for a channel present in chunk 1 and 0, 21 for a channel present in chunk 2 and 1, 32 for a channel present in chunk 3 and 2 etc...
+                special_index = i*10 + (i-1)
+                channel_chunk_dict.update({channel: special_index})
+            else :
+                channel_chunk_dict.update({channel: i})
+
+    # Save the dictionary to a file
+    with open('../../data/channel_chunk_dict.json', 'w') as file:
+        json.dump(channel_chunk_dict, file)
+        
+    print("Dictionary saved to file")

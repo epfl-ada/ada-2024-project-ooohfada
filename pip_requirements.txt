@@ -1,0 +1,8 @@
+pandas
+ollama
+tqdm
+numpy
+matplotlib
+seaborn
+pyarrow
+scipy
