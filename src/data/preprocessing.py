@@ -34,9 +34,6 @@ def apply_complete_preprocessing(df_timeseries, df_metadata_helper):
     # Merge the time series and metadata helper data
     df_preprocessed_data = df_timeseries.merge(df_metadata_helper, how='left', left_on=['channel', 'week'], right_on=['channel', 'week'])
 
-    # Set views, likes and dislikes to 0 if activity is 0
-    df_preprocessed_data.loc[df_preprocessed_data['delta_videos'] == 0, ['view_count', 'like_count', 'dislike_count']] = 0
-
     return df_preprocessed_data
 
 def apply_timeseries_preprocessing(df_timeseries):

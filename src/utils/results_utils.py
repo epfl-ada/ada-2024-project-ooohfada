@@ -3,6 +3,7 @@ import seaborn as sns
 from scipy.stats import ttest_ind
 import datetime
 from IPython.display import clear_output
+import pandas as pd
 
 # I. Load the data
 
@@ -60,6 +61,26 @@ def plot_rolling_growth_rate(channel, df, bad_buzz_df, event_name = "Decline"):
     bad_buzz_weeks = bad_buzz_df[bad_buzz_df['channel'] == channel]['week']
     for week in bad_buzz_weeks:
         plt.axvline(x=week, color='green', linestyle='--', alpha=0.7, label=event_name if week == bad_buzz_weeks.iloc[0] else "")
+    
+    plt.xlabel('Week')
+    plt.ylabel('Growth Rate')
+    plt.title(f'Delta Subscribers and Rolling Growth Rate for Channel {channel}')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.show()
+
+def plot_rolling_growth_rate2(channel, df, event_name = "Decline"): 
+    df_plot = df.xs(channel, level='channel')
+
+    clear_output(wait=True)
+    plt.figure(figsize=(15, 5))
+    
+    sns.lineplot(data=df_plot, x='week', y='delta_subs', label='Delta Subscribers', color='blue')
+    sns.lineplot(data=df_plot, x='week', y='rolling_growth_rate', label='Rolling Growth Rate', color='orange')
+    
+    plt.fill_between(df_plot.reset_index()['week'], df_plot['delta_subs'], df_plot['rolling_growth_rate'], 
+                    where=(df_plot['delta_subs'] < df_plot['rolling_growth_rate']), 
+                    color='red', alpha=0.3, label=f'Potential {event_name}')
     
     plt.xlabel('Week')
     plt.ylabel('Growth Rate')
@@ -208,7 +229,7 @@ def plot_engagement_results(ax, df, week, p_value_dislikes, p_value_ratio, pos_p
     sns.lineplot(data=df, x='relative_week', y='like_count', label='Likes', color='blue', ax=ax)
     sns.lineplot(data=df, x='relative_week', y='dislike_count', label='Dislikes', color='orange', ax=ax)
     ax2 = ax.twinx()
-    ax2.plot(df['relative_week'], (df['like_count'] / (df['like_count'] + df['dislike_count'])).rolling(5).mean(), label='Like/Dislike Ratio', color='purple')
+    ax2.plot(df['relative_week'], (df['like_count'] / (df['like_count'] + df['dislike_count'])), label='Like/Dislike Ratio', color='purple')
     
     ax.axvline(x=0, color='green', linestyle='--', label='Bad Buzz Start')
     
@@ -226,27 +247,28 @@ def analyze_engagement_around_bad_buzz(channel, df, bad_buzz_df, pos_p_value=-0.
     Plot the likes, dislikes, and like/dislike ratio around bad buzz weeks for a given channel.
     """
     df_plot = df.xs(channel, level='channel').reset_index()
+
     bad_buzz_weeks = bad_buzz_df[bad_buzz_df['channel'] == channel]['week']
-    
+
     fig, axes = plt.subplots(6, 4, figsize=(20, 20))
     axes = axes.flatten()
-    
+
     for i, week in enumerate(bad_buzz_weeks):
         df_plot = normalize_week_indices(df_plot, week)
         pre_buzz, during_buzz, post_buzz = define_periods(df_plot)
         
         p_value_dislikes, p_value_ratio = perform_engagement_t_tests(pre_buzz, during_buzz)
-        
+
         plot_engagement_results(axes[i], df_plot, week, p_value_dislikes, p_value_ratio, pos_p_value)
-    
+
     # Hide any unused subplots
     for j in range(i + 1, len(axes)):
-        fig.delaxes(axes[j])
-    
-    
+        fig.delaxes(axes[j])    
+
     lines, labels = axes[0].get_legend_handles_labels()
     fig.legend(lines + [plt.Line2D([0], [0], color="purple", lw=1.5)], labels + ["Like/Dislike Ratio"], loc='upper center', ncol=4)
-    
+    fig.legend(lines + [plt.Line2D([0], [0], color="purple", lw=1.5)], labels + ["Like/Dislike Ratio"], loc='upper center', ncol=4)
+
     plt.subplots_adjust(hspace=0.35, top=0.95)
     plt.tight_layout()
     plt.show()
