@@ -16,8 +16,8 @@ echo "Perform data preprocessing"
 python src/data/preprocessing.py # Run the data loader
 echo "Perform BB data preprocessing"
 python src/data/bbdataset_preprocessing.py # Run the data loader
-echo "Perform metadata preprocessing"
-python src/data/reduce_metadata.py # Run the metadata reducer
+# echo "Perform metadata preprocessing"
+# python src/data/reduce_metadata.py # Run the metadata reducer
 
 echo "Deactivating the virtual environment"
 deactivate # Deactivate the virtual environment
