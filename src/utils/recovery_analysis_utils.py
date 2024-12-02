@@ -4,7 +4,7 @@ import statsmodels.api as sm
 import networkx as nx
 from tqdm import tqdm
 
-def match_declines(declines, timeseries, channels):
+def match_declines(declines):
     """
     Match declines in the context of a matched observational study.
     """
