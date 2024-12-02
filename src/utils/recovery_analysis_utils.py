@@ -26,11 +26,15 @@ def match_declines(declines):
     # 1. use caliper?
     # 2. reduce nb of samples ? is random sampling ok or not at all?
 
-    for control_index, control_row in tqdm(control.iterrows(), total=len(control)):
-        for treatment_index, treatment_row in treatment.iterrows():
-            similarity = _get_similarity(control_row['Propensity'], treatment_row['Propensity'])
-            graph.add_weighted_edges_from([(control_index, treatment_index, similarity)])
+    print('Computing similarities')
+    similarities = 1 - np.abs(control['Propensity'].values[:, None].T - treatment['Propensity'].values[:, None])
 
+    print('Computing edges')
+    for control_index in tqdm(range(control.shape[0])):
+        edges = [(control.index[control_index], treatment.index[treatment_index], similarities[control_index, treatment_index]) for treatment_index in range(treatment.shape[0])]
+        graph.add_weighted_edges_from(edges)
+
+    print('Computing matches')
     matches = nx.max_weight_matching(graph)
 
     return matches
