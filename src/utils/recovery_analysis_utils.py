@@ -4,6 +4,7 @@ import statsmodels.api as sm
 import networkx as nx
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import scipy.optimize
 import seaborn as sns
 
 GREEN = '#2ca02c'
@@ -34,15 +35,12 @@ def match_declines(declines):
     print('Computing similarities')
     similarities = 1 - np.abs(control['Propensity'].values[:, None].T - treatment['Propensity'].values[:, None])
 
-    print('Computing edges')
-    for control_index in tqdm(range(control.shape[0])):
-        edges = [(control.index[control_index], treatment.index[treatment_index], similarities[control_index, treatment_index]) for treatment_index in range(treatment.shape[0])]
-        graph.add_weighted_edges_from(edges)
-
     print('Computing matches')
-    matches = nx.max_weight_matching(graph)
+    matched_index_indices = scipy.optimize.linear_sum_assignment(similarities, maximize=True)
 
-    return matches
+    matched_indices = [(control.index[j], treatment.index[i]) for i, j in zip(*matched_index_indices)]
+
+    return matched_indices
 
 def _compute_propensity_score(declines):
     regressors = ['Duration', 'Subs_start', 'Views_start'] + [col for col in declines.columns if 'Cat' in col]
