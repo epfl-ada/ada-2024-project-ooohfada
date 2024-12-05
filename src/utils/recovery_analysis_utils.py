@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 import networkx as nx
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 import scipy.optimize
+import pickle
 import seaborn as sns
+from tqdm import tqdm
 
 GREEN = '#2ca02c'
 RED = '#d62728'
@@ -161,3 +162,70 @@ def plot_sampling_rates(df, seed):
     plt.ylabel('Proportion of declines')
     plt.legend()
     plt.show()
+
+def str_to_list(s):
+    elements = s.strip('[]').split(', ')
+    return [int(sub) if sub.isnumeric() else sub for sub in elements if sub]
+
+def get_sampled_declines_with_videos(df, df_videos):
+    try:
+        declines = pd.read_csv('data/sampled_decline_events_with_videos.csv')
+        print("Sampled declines with videos loaded from file.")
+    except FileNotFoundError:
+        print("File not found, computing the sampled declines with videos...")
+
+        df = df.copy()
+
+        def find_videos_before(row):
+            channel_mask = df_videos['channel'] == row['Channel']
+            left_mask = df_videos['week'] >= row['Start'] - row['Duration']
+            right_mask = df_videos['week'] <= row['Start']
+            return df_videos[channel_mask & left_mask & right_mask].index.tolist()
+
+        def find_videos_after(row):
+            channel_mask = df_videos['channel'] == row['Channel']
+            left_mask = df_videos['week'] >= row['Start']
+            right_mask = df_videos['week'] <= row['End'] + row['Duration']
+            return df_videos[channel_mask & left_mask & right_mask].index.tolist()
+            
+
+        df['Videos_before'] = [[]] * len(df)
+        df['Videos_after'] = [[]] * len(df)
+
+        for idx, row in tqdm(df.iterrows(), total=len(df)):
+            df.at[idx, 'Videos_before'] = find_videos_before(row)
+            df.at[idx, 'Videos_after'] = find_videos_after(row)
+
+        declines = df
+
+    declines['Videos_before'] = declines['Videos_before'].apply(str_to_list)
+    declines['Videos_after'] = declines['Videos_after'].apply(str_to_list)
+
+    return declines
+
+def add_video_stats(df, df_videos):
+    df = df.copy()
+
+    # Compute the number of videos per week before and after each decline
+    df['Videos_per_week_before'] = df.apply(lambda row: len(row['Videos_before']) / row['Duration'], axis=1)
+    df['Videos_per_week_after'] = df.apply(lambda row: len(row['Videos_after']) / row['Duration'], axis=1)
+
+    # Compute the mean duration of videos before and after each decline
+    df['Mean_duration_before'] = df.apply(lambda row: np.mean(df_videos.loc[row['Videos_before'], 'duration']), axis=1)
+    df['Mean_duration_after'] = df.apply(lambda row: np.mean(df_videos.loc[row['Videos_after'], 'duration']), axis=1)
+
+    return df
+
+def get_matches(df):
+    try:
+        with open('data/matches.pkl', 'rb') as f:
+            matches = pickle.load(f)
+            print("Matches loaded from file.")
+    except FileNotFoundError:
+        print("File not found, computing the matches...")
+        matches = match_declines(df)
+
+    # Save the newly computed matches
+    with open('data/matches.pkl', 'wb') as f:
+        pickle.dump(matches, f)
+        print("Matches saved to file.")
