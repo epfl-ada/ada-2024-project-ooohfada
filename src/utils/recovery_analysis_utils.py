@@ -11,61 +11,56 @@ from tqdm import tqdm
 GREEN = '#2ca02c'
 RED = '#d62728'
 
-def match_declines(declines):
+def  _match_on(treatment: str, declines: pd.DataFrame, verbose: bool = False):
     """
     Match declines in the context of a matched observational study.
     """
     declines = declines.copy()
+						
+    # These columns should not be used to compute the propensity score
+    excluded_columns = [treatment, 'Channel', 'Recovered', 'Start', 'End']
 
+    df_treatment = declines[treatment]
+    declines = declines.drop(columns=excluded_columns)
+
+    # Preprocess : create dummy variables for the categories and standardize the data
     declines = _preprocess_for_matching(declines)
 
-    declines['Propensity'] = _compute_propensity_score(declines)
+    # 
+    declines['Propensity'] = _compute_propensity_score(predictors=declines, treatment_values=df_treatment, verbose=verbose)
 
-    treatment = declines[declines['Recovered'] == 1]
-    control = declines[declines['Recovered'] == 0]
-
-    # Match treatment and control
-    print('Matching treatment and control')
-
-    graph = nx.Graph()
-
-    # TODO this PSM is very very slow :
-    # 1. use caliper?
-    # 2. reduce nb of samples ? is random sampling ok or not at all?
+    treatment_group = declines[df_treatment]
+    control_group = declines[~df_treatment]
 
     print('Computing similarities')
-    similarities = 1 - np.abs(control['Propensity'].values[:, None].T - treatment['Propensity'].values[:, None])
+    similarities = 1 - np.abs(control_group['Propensity'].values[:, None].T - treatment_group['Propensity'].values[:, None])
 
     print('Computing matches')
     matched_index_indices = scipy.optimize.linear_sum_assignment(similarities, maximize=True)
 
-    matched_indices = [(control.index[j], treatment.index[i]) for i, j in zip(*matched_index_indices)]
+    matched_indices = [(control_group.index[j], treatment_group.index[i]) for i, j in zip(*matched_index_indices)]
 
     return matched_indices
 
-def _compute_propensity_score(declines):
-    regressors = ['Duration', 'Subs_start', 'Views_start'] + [col for col in declines.columns if 'Cat' in col]
-
-    model = sm.Logit(declines['Recovered'].astype(np.float64), declines[regressors].astype(np.float64))
-    res = model.fit()
-
-    return res.predict()
-
-
 def _preprocess_for_matching(declines):
-    declines['Duration'] = ( declines['Duration'] -  declines['Duration'].mean())/ declines['Duration'].std()
-    declines['Subs_start'] = ( declines['Subs_start'] -  declines['Subs_start'].mean())/ declines['Subs_start'].std()
-    declines['Views_start'] = ( declines['Views_start'] -  declines['Views_start'].mean())/ declines['Views_start'].std()
-    declines = pd.get_dummies(data = declines, columns = ['Category'], prefix = 'Cat', drop_first = True, )
+    for col in [col for col in declines.columns if col != 'Category']:
+        declines[col] = (declines[col] - declines[col].mean()) / declines[col].std()
 
+    declines = pd.get_dummies(data = declines, columns = ['Category'], prefix = 'Cat', drop_first = True, )
     declines.rename(columns={col: col.replace(' ', '_').replace('&', '_and_') for col in declines.columns}, inplace=True)
 
     return declines
 
-def _get_similarity(propensity1, propensity2):
-    return 1 - np.abs(propensity1 - propensity2)
+def _compute_propensity_score(predictors: pd.DataFrame, treatment_values: pd.Series, verbose: bool = False):
+    model = sm.Logit(treatment_values.astype(np.float64), predictors.astype(np.float64))
+    res = model.fit(disp=verbose)
 
-def plot_groups_by_categories(df):
+    if verbose:
+        print(res.summary())
+
+    return res.predict()
+
+def plot_recovered_by_categories(df):
     plt.figure(figsize=(13, 4))
     ax = plt.subplot(1, 2, 1)
 
@@ -159,7 +154,7 @@ def plot_sampling_rates(df, seed):
     plt.plot(sample_proportions, recovered_props, label='Recovered', color=GREEN)
     plt.plot(sample_proportions, unrecovered_props, label='Not recovered', color=RED)
     plt.xlabel('Sample proportion')
-    plt.ylabel('Proportion of declines')
+    plt.ylabel('Proportion')
     plt.legend()
     plt.show()
 
@@ -216,16 +211,35 @@ def add_video_stats(df, df_videos):
 
     return df
 
-def get_matches(df):
+def get_matches(treatment: str, declines: pd.DataFrame, verbose: bool = False):
     try:
-        with open('data/matches.pkl', 'rb') as f:
+        with open(f'data/matches/{treatment}.pkl', 'rb') as f:
             matches = pickle.load(f)
-            print("Matches loaded from file.")
+            print(f"Matches loaded from file for treatment {treatment}.")
     except FileNotFoundError:
-        print("File not found, computing the matches...")
-        matches = match_declines(df)
+        print(f"File not found, computing the matches for treatment {treatment}...")
+        matches = _match_on(treatment, declines, verbose=verbose)
 
-    # Save the newly computed matches
-    with open('data/matches.pkl', 'wb') as f:
-        pickle.dump(matches, f)
-        print("Matches saved to file.")
+        # Save the newly computed matches
+        with open(f'data/matches/{treatment}.pkl', 'wb') as f:
+            pickle.dump(matches, f)
+            print("Matches saved to file.")
+
+    return matches
+
+def plot_treatment_effect(df, treatment: str):
+    plt.figure(figsize=(4, 3))
+
+    # bar plot with categories
+    counts = df.groupby(treatment)['Recovered'].mean() * 100
+    # add mean line
+    counts.plot(kind='bar', color=[RED, GREEN], legend=False)
+    plt.title(f'Proportion of successful recoveries depending on {treatment}')
+    plt.xlabel(treatment)
+    plt.ylim(0, 100)
+    plt.ylabel('Recovery rate')
+    for i, count in enumerate(counts):
+        plt.text(i, count, f'{count:.2f}%', ha='center', va='bottom')
+    plt.yticks([0, 20, 40, 60, 80, 100], ['0%', '20%', '40%', '60%', '80%', '100%'])
+
+    plt.show()
