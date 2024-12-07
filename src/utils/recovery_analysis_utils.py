@@ -18,7 +18,7 @@ def  _match_on(treatment: str, declines: pd.DataFrame, verbose: bool = False):
     declines = declines.copy()
 						
     # These columns should not be used to compute the propensity score
-    excluded_columns = [treatment, 'Channel', 'Recovered', 'Start', 'End']
+    excluded_columns = [treatment, 'Channel', 'Recovered', 'Start', 'End', 'Duration']
 
     df_treatment = declines[treatment]
     declines = declines.drop(columns=excluded_columns)
@@ -103,7 +103,7 @@ def plot_recovered_by_categories(df):
     plt.show()
 
 def plot_group_distributions(df):
-    plt.figure(figsize=(14, 8))
+    plt.figure(figsize=(13, 6))
 
     ax = plt.subplot(2, 2, 1)
 
@@ -131,11 +131,11 @@ def plot_group_distributions(df):
 
     ax = plt.subplot(2, 2, 4)
 
-    sns.histplot(data=df, x="Delta_videos", hue="Recovered", log_scale=True, element="step", palette=[RED, GREEN], ax=ax)
+    sns.histplot(data=df, x="Duration", hue="Recovered", log_scale=True, element="step", palette=[RED, GREEN], ax=ax)
 
-    plt.title('Distribution of channels by delta videos\nat the start of the decline')
-    plt.xlabel('Delta videos at the start of the decline')
-    plt.ylabel('Number of channels')
+    plt.title('Distribution of declines by duration')
+    plt.xlabel('Duration of the decline')
+    plt.ylabel('Number of declines')
 
     plt.tight_layout()
     plt.show()
