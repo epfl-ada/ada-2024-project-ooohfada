@@ -12,7 +12,7 @@ def llm_pull(model):
     """
     ollama.pull(model)
 
-def query_ollama(prompt, model="mistral-7b"):
+def query_ollama(prompt, model="mistral"):
     """
     Query the Ollama-hosted model locally
 
@@ -28,12 +28,12 @@ def query_ollama(prompt, model="mistral-7b"):
     """
 
         # Check if the model is pulled
-    if model not in ollama.models():
+    if model not in ollama.list():
         llm_pull(model)
 
     try:
         response = ollama.generate(model=model, prompt=prompt)
-        return response["text"].strip()
+        return response.get('response')
     except Exception as e:
         raise RuntimeError(f"Error querying the local model: {e}")
 
@@ -125,3 +125,28 @@ def clickbait(title, description):
     question = "Does the title or description appear to use clickbait techniques to attract viewers, such as exagerated use of caps, misleading or exaggerated claims, sensational language, or incomplete information?"
 
     return query_ollama(create_prompt(GLOBAL_CONTEXT, title, description, question))
+
+def __main__():
+    # Example usage
+    title = "I'm Sorry."
+    description = "I made a mistake and I'm sorry. I hope you can forgive me."
+    print(apology_video(title, description))
+
+    title = "My Channel Update."
+    description = "I've noticed a decrease in views and subscribers lately, so I wanted to address it in this video."
+    print(address_decline(title, description))
+
+    title = "I'm Back!"
+    description = "After a long break, I'm excited to announce my return to YouTube with new content."
+    print(announced_comeback(title, description))
+
+    title = "Collab with My Friend!"
+    description = "I had a great time collaborating with my friend on this video. Check it out!"
+    print(featuring_another_creator(title, description))
+
+    title = "You Won't Believe What Happened!"
+    description = "This video will shock you! Watch until the end to find out."
+    print(clickbait(title, description))
+
+if __name__ == "__main__":
+    __main__()
