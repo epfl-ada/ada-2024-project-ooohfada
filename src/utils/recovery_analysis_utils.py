@@ -3,6 +3,7 @@ import numpy as np
 import statsmodels.api as sm
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import scipy.optimize
 import pickle
 import seaborn as sns
@@ -228,19 +229,91 @@ def get_matches(treatment: str, declines: pd.DataFrame, verbose: bool = False):
 
     return matches
 
-def plot_treatment_effect(df, treatment: str):
-    plt.figure(figsize=(4, 3))
+def plot_treatment_effect(df, treatment: str, ax=None):
+    if ax is None:
+        plt.figure(figsize=(4, 3))
+
+    ax = ax if ax is not None else plt.gca()
 
     # bar plot with categories
     counts = df.groupby(treatment)['Recovered'].mean() * 100
     # add mean line
-    counts.plot(kind='bar', color=[RED, GREEN], legend=False)
-    plt.title(f'Proportion of successful recoveries depending on {treatment}')
-    plt.xlabel(treatment)
-    plt.ylim(0, 100)
-    plt.ylabel('Recovery rate')
+    counts.plot(kind='bar', color=[RED, GREEN], legend=False, ax=ax)
+    ax.set_title(f'Proportion of successful recoveries\ndepending on {treatment}')
+    ax.set_xlabel(treatment)
+    ax.set_ylim(0, 100)
+    ax.set_ylabel('Recovery rate')
     for i, count in enumerate(counts):
-        plt.text(i, count, f'{count:.2f}%', ha='center', va='bottom')
-    plt.yticks([0, 20, 40, 60, 80, 100], ['0%', '20%', '40%', '60%', '80%', '100%'])
+        ax.text(i, count, f'{count:.2f}%', ha='center', va='bottom')
+    ax.set_yticks([0, 20, 40, 60, 80, 100], ['0%', '20%', '40%', '60%', '80%', '100%'])
+    ax.tick_params(axis='x', rotation=0)
 
+def perform_logistic_regression(X, y):
+    # Make X and y numeric, and add a constant
+    X = X.astype(float)
+    y = y.astype(float)
+    X = sm.add_constant(X)
+
+    # Fit the logistic regression
+    logit_model = sm.Logit(y, X)
+    results = logit_model.fit(disp=0)
+
+    return results
+
+def plot_logit_coefficients(logit_result, title=None, ax=None, color_legend=True):
+    # use p-values as the palette
+    cmap = plt.cm.coolwarm
+    reg_data = pd.DataFrame({'coeff': logit_result.params, 'p-value': logit_result.pvalues, 'se': logit_result.bse.values}).sort_values('coeff', ascending=True)
+    norm = mcolors.TwoSlopeNorm(vmin=0, vcenter=0.05, vmax=1)
+    colors = cmap(norm(reg_data['p-value']))
+
+    ax.vlines(0, 0, len(reg_data), color='grey', alpha=0.75, linestyle='--', linewidth=0.5)
+
+
+    ax.barh(reg_data.index, reg_data['coeff'], color=colors, height=0.6)
+    ax.set_title(title if title else 'Logistic regression coefficients for recovery')
+    ax.set_xlabel('Coefficient')
+    ax.set_ylabel('Feature')
+    
+    # add the colorbar
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, orientation='vertical')
+    cbar.set_label('p-value')
+
+    if not color_legend:
+        cbar.remove()
+
+def plot_coeffs_comparison_by_removing_no_videos_declines(results_all_declines, results_without_no_videos_declines):
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True, sharex=True)
+    fig.suptitle('Logistic regression coefficients for recovery')
+    [ax.grid(axis='y', linestyle='--', alpha=0.2) for ax in axes]
+    # put the grid  behind
+    [ax.set_axisbelow(True) for ax in axes]
+
+    plot_logit_coefficients(results_all_declines, title='All declines', ax=axes[0], color_legend=False)
+    plot_logit_coefficients(results_without_no_videos_declines, title='Without declines with no videos', ax=axes[1])
+
+    plt.tight_layout()
     plt.show()
+
+def plot_distribution_by_frequency_reaction(df_post_freq, column, title):
+    avg_col_value = np.log(df_post_freq[column].mean())
+
+    fig, axes = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(10, 2))
+    [ax.grid(True) for ax in axes]
+
+    colors = plt.cm.coolwarm([1, 0.2, 0])
+
+    for ax, reaction, color in zip(axes, df_post_freq['Frequency_reaction'].unique(), colors):
+        mask = df_post_freq['Frequency_reaction'] == reaction
+        sns.histplot(x=column, data=df_post_freq[mask], bins=20, log_scale=True, stat='density', common_norm=False, ax=ax, color=color, label='Before')
+        ax.axvline(avg_col_value, color='red', linestyle='--', label='Overall average', linewidth=1)
+        ax.set_title(f'YouTuber reaction : {reaction.replace("_", " ")}')
+        ax.set_xlabel('Videos per week')
+        handles, labels = ax.get_legend_handles_labels() 
+        handles, labels = [handles[0]], [labels[0]]
+        fig.legend(handles, labels, loc='upper right')
+        
+    fig.suptitle(title)
+    plt.tight_layout()
