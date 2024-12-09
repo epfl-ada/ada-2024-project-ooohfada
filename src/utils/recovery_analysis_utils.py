@@ -16,17 +16,13 @@ def  _match_on(treatment: str, declines: pd.DataFrame, verbose: bool = False):
     Match declines in the context of a matched observational study.
     """
     declines = declines.copy()
-						
-    # These columns should not be used to compute the propensity score
-    excluded_columns = [treatment, 'Channel', 'Recovered', 'Start', 'End', 'Duration']
 
     df_treatment = declines[treatment]
-    declines = declines.drop(columns=excluded_columns)
 
     # Preprocess : create dummy variables for the categories and standardize the data
-    declines = _preprocess_for_matching(declines)
+    declines = preprocess_for_matching(declines, treatment)
 
-    # 
+    # Compute the propensity score
     declines['Propensity'] = _compute_propensity_score(predictors=declines, treatment_values=df_treatment, verbose=verbose)
 
     treatment_group = declines[df_treatment]
@@ -42,11 +38,16 @@ def  _match_on(treatment: str, declines: pd.DataFrame, verbose: bool = False):
 
     return matched_indices
 
-def _preprocess_for_matching(declines):
+def preprocess_for_matching(declines: pd.DataFrame, treatment: str):
+    # These columns should not be used to compute the propensity score
+    excluded_columns = [treatment, 'Channel', 'Recovered', 'Start', 'End', 'Duration']
+
+    declines = declines.copy().drop(columns=excluded_columns)
+
     for col in [col for col in declines.columns if col != 'Category']:
         declines[col] = (declines[col] - declines[col].mean()) / declines[col].std()
 
-    declines = pd.get_dummies(data = declines, columns = ['Category'], prefix = 'Cat', drop_first = True, )
+    declines = pd.get_dummies(data = declines, columns = ['Category'], prefix = 'Cat', drop_first = True)
     declines.rename(columns={col: col.replace(' ', '_').replace('&', '_and_') for col in declines.columns}, inplace=True)
 
     return declines
