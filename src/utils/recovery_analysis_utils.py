@@ -16,6 +16,7 @@ def  _match_on(treatment: str, declines: pd.DataFrame, verbose: bool = False):
     """
     Match declines in the context of a matched observational study.
     """
+
     declines = declines.copy()
 
     df_treatment = declines[treatment]
@@ -27,7 +28,7 @@ def  _match_on(treatment: str, declines: pd.DataFrame, verbose: bool = False):
     declines['Propensity'] = _compute_propensity_score(predictors=declines, treatment_values=df_treatment, verbose=verbose)
 
     treatment_group = declines[df_treatment]
-    control_group = declines[~df_treatment]
+    control_group = declines[~(df_treatment == True)]
 
     print('Computing similarities')
     similarities = 1 - np.abs(control_group['Propensity'].values[:, None].T - treatment_group['Propensity'].values[:, None])
