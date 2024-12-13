@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import scipy.optimize
 import pickle
+import plotly.graph_objects as go
 import seaborn as sns
 from tqdm import tqdm
 
@@ -261,20 +262,26 @@ def perform_logistic_regression(X, y):
 
     return results
 
-def plot_logit_coefficients(logit_result, title=None, ax=None, color_legend=True):
+def plot_logit_coefficients(logit_result, title=None, ax=None, color_legend=True, filename=None):
+
+    if ax is None:
+        ax = plt.gca()
+
     # use p-values as the palette
     cmap = plt.cm.coolwarm
     reg_data = pd.DataFrame({'coeff': logit_result.params, 'p-value': logit_result.pvalues, 'se': logit_result.bse.values}).sort_values('coeff', ascending=True)
+    reg_data.index = reg_data.index.str.replace('_', ' ').str.replace('const', 'Intercept')
     norm = mcolors.TwoSlopeNorm(vmin=0, vcenter=0.05, vmax=1)
     colors = cmap(norm(reg_data['p-value']))
 
     ax.vlines(0, 0, len(reg_data), color='grey', alpha=0.75, linestyle='--', linewidth=0.5)
 
-
     ax.barh(reg_data.index, reg_data['coeff'], color=colors, height=0.6)
     ax.set_title(title if title else 'Logistic regression coefficients for recovery')
     ax.set_xlabel('Coefficient')
     ax.set_ylabel('Feature')
+    ax.grid(axis='y', linestyle='--', alpha=0.2, linewidth=0.5)
+    ax.set_axisbelow(True)
     
     # add the colorbar
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -285,12 +292,12 @@ def plot_logit_coefficients(logit_result, title=None, ax=None, color_legend=True
     if not color_legend:
         cbar.remove()
 
+    if filename:
+        plt.savefig('plot_data/' + filename)
+
 def plot_coeffs_comparison_by_removing_no_videos_declines(results_all_declines, results_without_no_videos_declines):
     fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True, sharex=True)
     fig.suptitle('Logistic regression coefficients for recovery')
-    [ax.grid(axis='y', linestyle='--', alpha=0.2) for ax in axes]
-    # put the grid  behind
-    [ax.set_axisbelow(True) for ax in axes]
 
     plot_logit_coefficients(results_all_declines, title='All declines', ax=axes[0], color_legend=False)
     plot_logit_coefficients(results_without_no_videos_declines, title='Without declines with no videos', ax=axes[1])
