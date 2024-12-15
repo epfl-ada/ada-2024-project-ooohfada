@@ -293,7 +293,7 @@ def plot_logit_coefficients(logit_result, title=None, ax=None, color_legend=True
         cbar.remove()
 
     if filename:
-        plt.savefig('plot_data/' + filename)
+        plt.savefig('plot_data/' + filename, bbox_inches='tight')
 
 def plot_coeffs_comparison_by_removing_no_videos_declines(results_all_declines, results_without_no_videos_declines):
     fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True, sharex=True)
