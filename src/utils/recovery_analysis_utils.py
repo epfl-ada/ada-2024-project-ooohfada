@@ -64,7 +64,7 @@ def _compute_propensity_score(predictors: pd.DataFrame, treatment_values: pd.Ser
 
     return res.predict()
 
-def plot_recovered_by_categories(df):
+def plot_recovered_by_categories(df, filename=None):
     plt.figure(figsize=(13, 4))
     ax = plt.subplot(1, 2, 1)
 
@@ -103,6 +103,11 @@ def plot_recovered_by_categories(df):
     ax_right.set_yticks([mean])
     ax_right.set_yticklabels([f'{mean:.2f}%'])
     ax.legend([f'Mean over all declines', 'Not recovered', 'Recovered'], loc='lower center')
+
+    if filename:
+        # remove index name
+        counts.index.name = None
+        counts.to_csv('plot_data/' + filename, index=True)
 
     plt.show()
 
@@ -325,3 +330,197 @@ def plot_distribution_by_frequency_reaction(df_post_freq, column, title):
         
     fig.suptitle(title)
     plt.tight_layout()
+
+def map_topics_to_llm_themes(path_llm_topics, df_topics):
+    with open(path_llm_topics, "r") as f:
+        topic_to_theme = json.load(f)
+
+    # Convert keys and values to string
+    df_topics['Topic_before'] = df_topics['Topic_before'].dropna().astype(int).astype(str)
+    df_topics['Topic_after'] = df_topics['Topic_after'].dropna().astype(int).astype(str)
+
+    # Mapping
+    df_topics['Topic_before'] = df_topics['Topic_before'].map(topic_to_theme)
+    df_topics['Topic_after'] = df_topics['Topic_after'].map(topic_to_theme)
+
+    df_topics.dropna()
+    return df_topics
+
+def filter_topic_transitions(df):
+    # Group by Topic_before and Topic_after to calculate recovery rates
+    df = df.groupby(['Topic_before', 'Topic_after']).agg(
+        recovery_rate=('Recovered', 'mean'),
+        count=('Recovered', 'size')
+    ).reset_index()
+
+    # Filter for meaningful transitions, with more than 30 cases
+    df_filtered = df[df['count'] > 30]
+    return df_filtered
+
+def plot_heatmap_topics(df):
+    pivot_data = df.pivot(
+        index='Topic_before', 
+        columns='Topic_after', 
+        values='recovery_rate'
+    )
+
+    # Heatmap of the recovery rates by topic transitions
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(pivot_data, annot=True, fmt=".2f", cmap='coolwarm', cbar_kws={'label': 'Recovery Rate'})
+    plt.title('Recovery Rate by Topic Transition')
+    plt.xlabel('Topic After')
+    plt.ylabel('Topic Before')
+    plt.show()
+
+def plot_barplot_topics(df):
+    # Sort transitions by recovery rate
+    sorted_transitions = df.sort_values(by='recovery_rate', ascending=False)
+
+    # Create the bar plot
+    plt.figure(figsize=(12, 8))
+    sns.barplot(
+        data=sorted_transitions,
+        x='recovery_rate',
+        y=sorted_transitions.apply(lambda row: f"{row['Topic_before']} -> {row['Topic_after']}", axis=1),
+        palette='viridis'
+    )
+    plt.title('Recovery Rate by Topic Transition')
+    plt.xlabel('Recovery Rate')
+    plt.ylabel('Topic Transition')
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_barplot_topics_plotly(df):
+    df = df.sort_values(by='recovery_rate', ascending=False)
+
+    # Normalize recovery rates for color mapping (range 0-1)
+    min_rate = df['recovery_rate'].min()
+    max_rate = df['recovery_rate'].max()
+    df['normalized_rate'] = (df['recovery_rate'] - min_rate) / (max_rate - min_rate)
+
+
+    # Invert the normalized rate (so that high recovery rates correspond to cooler colors)
+    df['inverted_rate'] = 1 - df['normalized_rate']  # Inversion
+
+    # Generate color gradient using the coolwarm colormap
+    def rate_to_color(rate):
+        from matplotlib import cm
+        from matplotlib.colors import Normalize, to_hex
+        cmap = cm.get_cmap('coolwarm')  # Coolwarm colormap (blue to red)
+        norm = Normalize(vmin=0, vmax=1)  # Normalize based on 0-1 range
+        return to_hex(cmap(norm(rate)))  # Use inverted normalized rate for color mapping
+
+    # Map recovery rates to colors
+    min_rate = df['inverted_rate'].min()
+    max_rate = df['inverted_rate'].max()
+    # Apply the inverted color mapping to the link color
+    df['color'] = df['inverted_rate'].apply(rate_to_color)
+
+
+    # Prepare y-axis labels (row-wise operation)
+    df['transition_label'] = df.apply(
+        lambda row: f"{row['Topic_before']} -> {row['Topic_after']} (n={row['count']})", axis=1
+    )
+
+    # Create the bar chart with Plotly Express
+    fig = px.bar(
+        df,
+        x='recovery_rate',
+        y='transition_label',  # Use the prepared labels
+        orientation='h',
+        title='Recovery Rate by Topic Transition',
+        labels={'x': 'Recovery Rate', 'y': 'Topic Transition'},
+        hover_data=['count'],
+        color=df['color'],  # Assign custom colors
+        color_discrete_map="identity"  # Use colors directly
+    )
+
+    # Adjust layout
+    fig.update_layout(
+        height=1000,
+        showlegend=False  # Disable legend since each bar has a unique color
+    )
+
+    fig.show()
+
+
+def sankey_diagram(df):
+    # Normalize recovery rates for color mapping (range 0-1)
+    min_rate = df['recovery_rate'].min()
+    max_rate = df['recovery_rate'].max()
+    df['normalized_rate'] = (df['recovery_rate'] - min_rate) / (max_rate - min_rate)
+
+    # Invert the normalized rate (so that high recovery rates correspond to cooler colors)
+    df['inverted_rate'] = 1 - df['normalized_rate']  # Inversion
+
+    # Generate color gradient using the coolwarm colormap
+    def rate_to_color(rate):
+        from matplotlib import cm
+        from matplotlib.colors import Normalize, to_hex
+        cmap = cm.get_cmap('coolwarm')  # Coolwarm colormap (blue to red)
+        norm = Normalize(vmin=0, vmax=1)  # Normalize based on 0-1 range
+        return to_hex(cmap(norm(rate)))  # Use inverted normalized rate for color mapping
+
+    # Apply the inverted color mapping to the link color
+    df['link_color'] = df['inverted_rate'].apply(rate_to_color)
+
+    # Data preparation for Sankey diagram
+    df['Topic_before_Label'] = df['Topic_before'] + " (Before)"
+    df['Topic_after_Label'] = df['Topic_after'] + " (After)"
+
+    nodes_before = df['Topic_before_Label'].unique()
+    nodes_after = df['Topic_after_Label'].unique()
+    nodes = list(nodes_before) + list(nodes_after)
+
+    node_indices = {node: idx for idx, node in enumerate(nodes)}
+
+    # Map the topics to their respective indices for source and target
+    source = df['Topic_before_Label'].map(node_indices).tolist()
+    target = df['Topic_after_Label'].map(node_indices).tolist()
+    value = df['count'].tolist()
+    link_colors = df['link_color'].tolist()
+
+    # Prepare hover text with relevant info
+    hover_texts = [
+        f"Transition: {row['Topic_before']} → {row['Topic_after']}<br>"
+        f"Recovery Rate: {row['recovery_rate']:.2%}<br>"
+        f"Count: {row['count']}"
+        for _, row in df.iterrows()
+    ]
+
+    # Create Sankey diagram with Plotly
+    import plotly.graph_objects as go
+
+    fig = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=10,
+            line=dict(color="black", width=0.5),
+            label=nodes,
+            color="#004AAD" 
+        ),
+        link=dict(
+            source=source,
+            target=target,
+            value=value,
+            customdata=hover_texts,
+            hovertemplate='%{customdata}<extra></extra>',
+            color=link_colors  # Dynamic link colors based on inverted recovery rates
+        )
+    )])
+
+    fig.update_traces(
+        hoverinfo='all',  # Display all hover information (source, target, value)
+    )
+
+
+    # Callback to highlight outgoing flows dynamically on hover
+    fig.update_layout(
+        hovermode='closest',  # Ensure closest hover behavior
+        title_text="Topic Transitions and Recovery Rates",
+        font_size=12,
+        height=800,
+    )
+    # Display the plot
+    fig.show()
