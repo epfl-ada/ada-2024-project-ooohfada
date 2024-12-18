@@ -1,17 +1,10 @@
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
-import networkx as nx
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 import scipy.optimize
 import pickle
-import plotly.graph_objects as go
-import seaborn as sns
 from tqdm import tqdm
-
-GREEN = '#2ca02c'
-RED = '#d62728'
+import json
 
 def  _match_on(treatment: str, declines: pd.DataFrame, verbose: bool = False):
     """
@@ -63,109 +56,6 @@ def _compute_propensity_score(predictors: pd.DataFrame, treatment_values: pd.Ser
         print(res.summary())
 
     return res.predict()
-
-def plot_recovered_by_categories(df, filename=None):
-    plt.figure(figsize=(13, 4))
-    ax = plt.subplot(1, 2, 1)
-
-    # show percentage and count of recovered vs not recovered
-    counts = df['Recovered'].value_counts(normalize=False)
-
-    sns.barplot(x=counts.index, y=counts.values, hue=counts.index, palette=[RED, GREEN], legend=False)
-    plt.title('Recovery after a decline')
-    plt.xticks([0, 1], ['No', 'Yes'])
-    plt.yticks([100000, 200000, 300000], ['100k', '200k', '300k'])
-    plt.xlabel('Managed to recover from the decline')
-    plt.ylabel('Count')
-    plt.ylim(0, max(counts) * 1.1)
-
-    # add text with the percentage
-    for i, count in enumerate(counts):
-        plt.text(i, count, count, ha='center', va='bottom')
-
-    ax = plt.subplot(1, 2, 2)
-
-    # bar plot with categories
-    counts = df.groupby('Category')['Recovered'].value_counts(normalize=True).unstack().fillna(0) * 100
-    # add mean line
-    mean =  (1 - df['Recovered'].mean()) * 100
-    plt.axhline(mean, color='black', linestyle='--', linewidth=1)
-    counts.plot(kind='bar', stacked=True, color=[RED, GREEN], ax=ax, legend=False)
-    plt.title('Proportion of successful recoveries by category')
-    plt.xlabel('Category')
-    plt.ylim(0, 100)
-    plt.ylabel('Percentage')
-    plt.yticks([0, 20, 40, 60, 80, 100], ['0%', '20%', '40%', '60%', '80%', '100%'])
-
-    # put the mean on the right
-    ax_right = plt.gca().twinx()
-    ax_right.set_ylim(0, 100)
-    ax_right.set_yticks([mean])
-    ax_right.set_yticklabels([f'{mean:.2f}%'])
-    ax.legend([f'Mean over all declines', 'Not recovered', 'Recovered'], loc='lower center')
-
-    if filename:
-        # remove index name
-        counts.index.name = None
-        counts.to_csv('plot_data/' + filename, index=True)
-
-    plt.show()
-
-def plot_group_distributions(df):
-    plt.figure(figsize=(13, 6))
-
-    ax = plt.subplot(2, 2, 1)
-
-    sns.histplot(data=df, x="Subs_start", hue="Recovered", log_scale=True, element="step", palette=[RED, GREEN], ax=ax)
-
-    plt.title('Distribution of channels by subscribers\nat the start of the decline')
-    plt.xlabel('Subscribers at the start of the decline')
-    plt.ylabel('Number of channels')
-
-    ax = plt.subplot(2, 2, 2)
-
-    sns.histplot(data=df, x="Views_start", hue="Recovered", log_scale=True, element="step", palette=[RED, GREEN], ax=ax)
-
-    plt.title('Distribution of channels by total number of\nviews at the start of the decline')
-    plt.xlabel('Views at the start of the decline')
-    plt.ylabel('Number of channels')
-
-    ax = plt.subplot(2, 2, 3)
-
-    sns.histplot(data=df, x="Activity_start", hue="Recovered", log_scale=True, element="step", palette=[RED, GREEN], ax=ax)
-
-    plt.title('Distribution of channels by activity\nat the start of the decline')
-    plt.xlabel('Activity at the start of the decline')
-    plt.ylabel('Number of channels')
-
-    ax = plt.subplot(2, 2, 4)
-
-    sns.histplot(data=df, x="Duration", hue="Recovered", log_scale=True, element="step", palette=[RED, GREEN], ax=ax)
-
-    plt.title('Distribution of declines by duration')
-    plt.xlabel('Duration of the decline')
-    plt.ylabel('Number of declines')
-
-    plt.tight_layout()
-    plt.show()
-
-def plot_sampling_rates(df, seed):
-    # Sample the data at different sampling rates
-    sample_proportions = np.linspace(0.01, 1, 100)
-    new_dfs = {}
-    for prop in sample_proportions:
-        new_dfs[prop] = df.sample(frac=prop, replace=False, random_state=seed)
-
-    # Plot the recovery rates
-    recovered_props = [new_dfs[prop]['Recovered'].mean() for prop in sample_proportions]
-    unrecovered_props = [1 - prop for prop in recovered_props]
-    plt.figure(figsize=(6, 2))
-    plt.plot(sample_proportions, recovered_props, label='Recovered', color=GREEN)
-    plt.plot(sample_proportions, unrecovered_props, label='Not recovered', color=RED)
-    plt.xlabel('Sample proportion')
-    plt.ylabel('Proportion')
-    plt.legend()
-    plt.show()
 
 def str_to_list(s):
     elements = s.strip('[]').split(', ')
@@ -236,25 +126,6 @@ def get_matches(treatment: str, declines: pd.DataFrame, verbose: bool = False):
 
     return matches
 
-def plot_treatment_effect(df, treatment: str, ax=None):
-    if ax is None:
-        plt.figure(figsize=(4, 3))
-
-    ax = ax if ax is not None else plt.gca()
-
-    # bar plot with categories
-    counts = df.groupby(treatment)['Recovered'].mean() * 100
-    # add mean line
-    counts.plot(kind='bar', color=[RED, GREEN], legend=False, ax=ax)
-    ax.set_title(f'Proportion of successful recoveries\ndepending on {treatment}')
-    ax.set_xlabel(treatment)
-    ax.set_ylim(0, 100)
-    ax.set_ylabel('Recovery rate')
-    for i, count in enumerate(counts):
-        ax.text(i, count, f'{count:.2f}%', ha='center', va='bottom')
-    ax.set_yticks([0, 20, 40, 60, 80, 100], ['0%', '20%', '40%', '60%', '80%', '100%'])
-    ax.tick_params(axis='x', rotation=0)
-
 def perform_logistic_regression(X, y):
     # Make X and y numeric, and add a constant
     X = X.astype(float)
@@ -266,70 +137,6 @@ def perform_logistic_regression(X, y):
     results = logit_model.fit(disp=0)
 
     return results
-
-def plot_logit_coefficients(logit_result, title=None, ax=None, color_legend=True, filename=None):
-
-    if ax is None:
-        ax = plt.gca()
-
-    # use p-values as the palette
-    cmap = plt.cm.coolwarm
-    reg_data = pd.DataFrame({'coeff': logit_result.params, 'p-value': logit_result.pvalues, 'se': logit_result.bse.values}).sort_values('coeff', ascending=True)
-    reg_data.index = reg_data.index.str.replace('_', ' ').str.replace('const', 'Intercept')
-    norm = mcolors.TwoSlopeNorm(vmin=0, vcenter=0.05, vmax=1)
-    colors = cmap(norm(reg_data['p-value']))
-
-    ax.vlines(0, 0, len(reg_data), color='grey', alpha=0.75, linestyle='--', linewidth=0.5)
-
-    ax.barh(reg_data.index, reg_data['coeff'], color=colors, height=0.6)
-    ax.set_title(title if title else 'Logistic regression coefficients for recovery')
-    ax.set_xlabel('Coefficient')
-    ax.set_ylabel('Feature')
-    ax.grid(axis='y', linestyle='--', alpha=0.2, linewidth=0.5)
-    ax.set_axisbelow(True)
-    
-    # add the colorbar
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax, orientation='vertical')
-    cbar.set_label('p-value')
-
-    if not color_legend:
-        cbar.remove()
-
-    if filename:
-        plt.savefig('plot_data/' + filename, bbox_inches='tight')
-
-def plot_coeffs_comparison_by_removing_no_videos_declines(results_all_declines, results_without_no_videos_declines):
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True, sharex=True)
-    fig.suptitle('Logistic regression coefficients for recovery')
-
-    plot_logit_coefficients(results_all_declines, title='All declines', ax=axes[0], color_legend=False)
-    plot_logit_coefficients(results_without_no_videos_declines, title='Without declines with no videos', ax=axes[1])
-
-    plt.tight_layout()
-    plt.show()
-
-def plot_distribution_by_frequency_reaction(df_post_freq, column, title):
-    avg_col_value = np.log(df_post_freq[column].mean())
-
-    fig, axes = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(10, 2))
-    [ax.grid(True) for ax in axes]
-
-    colors = plt.cm.coolwarm([1, 0.2, 0])
-
-    for ax, reaction, color in zip(axes, df_post_freq['Frequency_reaction'].unique(), colors):
-        mask = df_post_freq['Frequency_reaction'] == reaction
-        sns.histplot(x=column, data=df_post_freq[mask], bins=20, log_scale=True, stat='density', common_norm=False, ax=ax, color=color, label='Before')
-        ax.axvline(avg_col_value, color='red', linestyle='--', label='Overall average', linewidth=1)
-        ax.set_title(f'YouTuber reaction : {reaction.replace("_", " ")}')
-        ax.set_xlabel('Videos per week')
-        handles, labels = ax.get_legend_handles_labels() 
-        handles, labels = [handles[0]], [labels[0]]
-        fig.legend(handles, labels, loc='upper right')
-        
-    fig.suptitle(title)
-    plt.tight_layout()
 
 def map_topics_to_llm_themes(path_llm_topics, df_topics):
     with open(path_llm_topics, "r") as f:
@@ -357,170 +164,208 @@ def filter_topic_transitions(df):
     df_filtered = df[df['count'] > 30]
     return df_filtered
 
-def plot_heatmap_topics(df):
-    pivot_data = df.pivot(
-        index='Topic_before', 
-        columns='Topic_after', 
-        values='recovery_rate'
-    )
+def add_declines_to_db(df, df_channels, df_data_processed):
+    df_all_declines = df
 
-    # Heatmap of the recovery rates by topic transitions
-    plt.figure(figsize=(12, 8))
-    sns.heatmap(pivot_data, annot=True, fmt=".2f", cmap='coolwarm', cbar_kws={'label': 'Recovery Rate'})
-    plt.title('Recovery Rate by Topic Transition')
-    plt.xlabel('Topic After')
-    plt.ylabel('Topic Before')
-    plt.show()
+    # If the decline is longer than 4 months without recovery, we consider the YouTuber was not successful in handling it.
+    # Our aim is to find strategies that lead to quick recoveries, therefore taking more than 4 months would be considered unsuccessful.
+    RECOVERY_THRESHOLD = 4 * 4
 
-def plot_barplot_topics(df):
-    # Sort transitions by recovery rate
-    sorted_transitions = df.sort_values(by='recovery_rate', ascending=False)
+    # Add the decline outcome
+    df_all_declines['Recovered'] = df_all_declines['Duration'] < RECOVERY_THRESHOLD
 
-    # Create the bar plot
-    plt.figure(figsize=(12, 8))
-    sns.barplot(
-        data=sorted_transitions,
-        x='recovery_rate',
-        y=sorted_transitions.apply(lambda row: f"{row['Topic_before']} -> {row['Topic_after']}", axis=1),
-        palette='viridis'
-    )
-    plt.title('Recovery Rate by Topic Transition')
-    plt.xlabel('Recovery Rate')
-    plt.ylabel('Topic Transition')
-    plt.tight_layout()
-    plt.show()
+    # Split the tuple (decline start, decline end) into two separate columns
+    df_all_declines['Event'] = df_all_declines['Event'].apply(lambda s: [int(week_id) for week_id in s[1:-1].split(', ')])
+    df_all_declines['Start'] = df_all_declines['Event'].apply(lambda e: e[0])
+    df_all_declines['End'] = df_all_declines['Event'].apply(lambda e: e[1])
+    df_all_declines.drop('Event', axis=1, inplace=True)
 
+    # Add the channel category
+    df_all_declines['Category'] = df_all_declines['Channel'].apply(lambda c: df_channels.loc[c]['category_cc'])
 
-def plot_barplot_topics_plotly(df):
-    df = df.sort_values(by='recovery_rate', ascending=False)
+    # Add the channel's subs at the start of the decline
+    decline_index = list(zip(df_all_declines['Channel'], df_all_declines['Start']))
+    df_all_declines['Subs_start'] = df_data_processed.loc[decline_index, 'subs'].values
 
-    # Normalize recovery rates for color mapping (range 0-1)
-    min_rate = df['recovery_rate'].min()
-    max_rate = df['recovery_rate'].max()
-    df['normalized_rate'] = (df['recovery_rate'] - min_rate) / (max_rate - min_rate)
+    # Add the activity at the start of the decline
+    df_all_declines['Activity_start'] = df_data_processed.loc[decline_index, 'activity'].values
 
+    # Add the channel's subs at the start of the decline
+    df_all_declines['Views_start'] = df_data_processed.loc[decline_index, 'views'].values
 
-    # Invert the normalized rate (so that high recovery rates correspond to cooler colors)
-    df['inverted_rate'] = 1 - df['normalized_rate']  # Inversion
+    return df_all_declines
 
-    # Generate color gradient using the coolwarm colormap
-    def rate_to_color(rate):
-        from matplotlib import cm
-        from matplotlib.colors import Normalize, to_hex
-        cmap = cm.get_cmap('coolwarm')  # Coolwarm colormap (blue to red)
-        norm = Normalize(vmin=0, vmax=1)  # Normalize based on 0-1 range
-        return to_hex(cmap(norm(rate)))  # Use inverted normalized rate for color mapping
+def calculate_difference(df, col_after, col_before, new_col):
+    """     
+    Calculate the difference between two columns and create a new column.
+    """
+    df[new_col] = df.apply(lambda row: row[col_after] - row[col_before], axis=1)
+    return df
 
-    # Map recovery rates to colors
-    min_rate = df['inverted_rate'].min()
-    max_rate = df['inverted_rate'].max()
-    # Apply the inverted color mapping to the link color
-    df['color'] = df['inverted_rate'].apply(rate_to_color)
+def add_change_columns(df, diff_col, before_col, longer_col, shorter_col, tolerance, threshold = 0.5):
+    """
+    Add flags for significant increases or decreases with a tolerance threshold.
+    """
+    df[longer_col] = df.apply(lambda row: (row[diff_col]) / np.max([row[before_col], tolerance]) > threshold, axis=1)
+    df[shorter_col] = df.apply(lambda row: (row[diff_col]) / np.max([row[before_col], tolerance]) < -threshold, axis=1)
+    return df
 
+def print_stats(df, increase_col, decrease_col, metric_name):
+    """
+    Print statistics for significant increases and decreases.
+    Args:
+        df (pd.DataFrame): The input dataframe.
+        increase_col (str): Column indicating increases.
+        decrease_col (str): Column indicating decreases.
+        metric_name (str): A name to describe the metric (e.g., 'video duration').
+    """
+    print(f"\n{df[increase_col].mean() * 100:.2f}% of the channels increased {metric_name} after the start of the decline.")
+    print(f"{df[decrease_col].mean() * 100:.2f}% of the channels decreased {metric_name} after the start of the decline.\n")
 
-    # Prepare y-axis labels (row-wise operation)
-    df['transition_label'] = df.apply(
-        lambda row: f"{row['Topic_before']} -> {row['Topic_after']} (n={row['count']})", axis=1
-    )
+def merge_and_report_topic_changes(df, topic_filepath):
+    """
+    Merge topic change data and report the percentage of channels that changed topics.
+    Args:
+        df (pd.DataFrame): The input dataframe.
+        topic_filepath (str): Filepath for topic change data CSV.
+    Returns:
+        pd.DataFrame: DataFrame after merging topic change data.
+    """
+    topic_data = pd.read_csv(topic_filepath)
+    topic_data.columns = ['Decline', 'Topic_change', 'Topic_before', 'Topic_after']
+    df = pd.merge(df, topic_data, left_index=True, right_on='Decline', how='left')
+    print(f"{df['Topic_change'].mean() * 100:.2f}% of the channels changed topic after the start of the decline.")
+    return df.drop(columns=['Decline', 'Topic_before', 'Topic_after'])
 
-    # Create the bar chart with Plotly Express
-    fig = px.bar(
-        df,
-        x='recovery_rate',
-        y='transition_label',  # Use the prepared labels
-        orientation='h',
-        title='Recovery Rate by Topic Transition',
-        labels={'x': 'Recovery Rate', 'y': 'Topic Transition'},
-        hover_data=['count'],
-        color=df['color'],  # Assign custom colors
-        color_discrete_map="identity"  # Use colors directly
-    )
+def process_categorical_variables(df, columns_to_dummy, drop_first=True):
+    """
+    Transforms categorical variables into dummy variables.
 
-    # Adjust layout
-    fig.update_layout(
-        height=1000,
-        showlegend=False  # Disable legend since each bar has a unique color
-    )
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        columns_to_dummy (list): List of columns to convert into dummies.
+        drop_first (bool): Whether to drop the first level to avoid multicollinearity.
 
-    fig.show()
+    Returns:
+        pd.DataFrame: The DataFrame with dummy variables added.
+    """
+    return pd.get_dummies(df, columns=columns_to_dummy, drop_first=drop_first)
 
+def convert_booleans_to_integers(df, boolean_columns):
+    """
+    Converts boolean variables into integers (0 and 1).
 
-def sankey_diagram(df):
-    # Normalize recovery rates for color mapping (range 0-1)
-    min_rate = df['recovery_rate'].min()
-    max_rate = df['recovery_rate'].max()
-    df['normalized_rate'] = (df['recovery_rate'] - min_rate) / (max_rate - min_rate)
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        boolean_columns (list): List of boolean columns to convert.
 
-    # Invert the normalized rate (so that high recovery rates correspond to cooler colors)
-    df['inverted_rate'] = 1 - df['normalized_rate']  # Inversion
+    Returns:
+        pd.DataFrame: The DataFrame with boolean columns transformed.
+    """
+    for col in boolean_columns:
+        df[col] = df[col].astype(int)
+    return df
 
-    # Generate color gradient using the coolwarm colormap
-    def rate_to_color(rate):
-        from matplotlib import cm
-        from matplotlib.colors import Normalize, to_hex
-        cmap = cm.get_cmap('coolwarm')  # Coolwarm colormap (blue to red)
-        norm = Normalize(vmin=0, vmax=1)  # Normalize based on 0-1 range
-        return to_hex(cmap(norm(rate)))  # Use inverted normalized rate for color mapping
+def calculate_correlation_matrix(df, target_column, columns_to_exclude=None):
+    """
+    Calculates and displays the correlation matrix, sorted by correlation with a target column.
 
-    # Apply the inverted color mapping to the link color
-    df['link_color'] = df['inverted_rate'].apply(rate_to_color)
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        target_column (str): The column to sort correlations by.
+        columns_to_exclude (list): Columns to exclude from correlation computation.
 
-    # Data preparation for Sankey diagram
-    df['Topic_before_Label'] = df['Topic_before'] + " (Before)"
-    df['Topic_after_Label'] = df['Topic_after'] + " (After)"
+    Returns:
+        pd.Series: Sorted correlations with the target column.
+    """
+    if columns_to_exclude:
+        df = df.drop(columns=columns_to_exclude)
+    correlation_matrix = df.corr()
+    return correlation_matrix[target_column].sort_values(ascending=False)
 
-    nodes_before = df['Topic_before_Label'].unique()
-    nodes_after = df['Topic_after_Label'].unique()
-    nodes = list(nodes_before) + list(nodes_after)
+def preprocess_and_analyze(df, categorical_columns, boolean_columns, target_column, columns_to_exclude=None):
+    """
+    Preprocesses the DataFrame and computes the correlation matrix.
 
-    node_indices = {node: idx for idx, node in enumerate(nodes)}
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        categorical_columns (list): List of columns to transform into dummies.
+        boolean_columns (list): List of boolean columns to transform into integers.
+        target_column (str): The column to analyze correlations with.
+        columns_to_exclude (list): Columns to exclude from correlation computation.
 
-    # Map the topics to their respective indices for source and target
-    source = df['Topic_before_Label'].map(node_indices).tolist()
-    target = df['Topic_after_Label'].map(node_indices).tolist()
-    value = df['count'].tolist()
-    link_colors = df['link_color'].tolist()
+    Returns:
+        pd.Series: Sorted correlations with the target column.
+    """
+    # Transform categorical variables
+    df_processed = process_categorical_variables(df, categorical_columns)
 
-    # Prepare hover text with relevant info
-    hover_texts = [
-        f"Transition: {row['Topic_before']} → {row['Topic_after']}<br>"
-        f"Recovery Rate: {row['recovery_rate']:.2%}<br>"
-        f"Count: {row['count']}"
-        for _, row in df.iterrows()
+    # Convert booleans to integers
+    df_processed = convert_booleans_to_integers(df_processed, boolean_columns)
+
+    # Calculate correlation matrix
+    correlations = calculate_correlation_matrix(df_processed, target_column, columns_to_exclude)
+
+    return correlations
+
+def build_reaction_dataframe(df_sampled, df_videos_per_week, df_video_duration):
+    """
+    Build a dataframe for reaction analysis by combining relevant columns and transformations.
+
+    Parameters:
+        df_sampled (pd.DataFrame): The main dataframe containing sampled data.
+        df_videos_per_week (pd.DataFrame): Dataframe with weekly video information.
+        df_video_duration (pd.DataFrame): Dataframe with video duration information.
+
+    Returns:
+        pd.DataFrame: A dataframe structured for reaction analysis.
+    """
+    # Define the columns to keep from df_sampled
+    kept_cols = [
+        'Channel', 'Duration', 'Start', 'End', 
+        'Posted_more', 'Posted_less', 
+        'Posted_longer_videos', 'Posted_shorter_videos', 
+        'Recovered', 'Mean_duration_difference', 
+        'Mean_frequency_difference'
     ]
+    
+    df_reactions = pd.concat([df_sampled[kept_cols], df_videos_per_week, df_video_duration], axis=1)
 
-    # Create Sankey diagram with Plotly
-    import plotly.graph_objects as go
-
-    fig = go.Figure(data=[go.Sankey(
-        node=dict(
-            pad=15,
-            thickness=10,
-            line=dict(color="black", width=0.5),
-            label=nodes,
-            color="#004AAD" 
-        ),
-        link=dict(
-            source=source,
-            target=target,
-            value=value,
-            customdata=hover_texts,
-            hovertemplate='%{customdata}<extra></extra>',
-            color=link_colors  # Dynamic link colors based on inverted recovery rates
-        )
-    )])
-
-    fig.update_traces(
-        hoverinfo='all',  # Display all hover information (source, target, value)
+    # Transform frequency-based reactions
+    df_reactions = add_reaction_column(
+        df_reactions, 
+        ['Posted_more', 'Posted_less'], 
+        'Frequency_reaction'
+    )
+    
+    # Transform video duration-based reactions
+    df_reactions = add_reaction_column(
+        df_reactions, 
+        ['Posted_longer_videos', 'Posted_shorter_videos'], 
+        'Video_duration_reaction'
     )
 
+    return df_reactions
 
-    # Callback to highlight outgoing flows dynamically on hover
-    fig.update_layout(
-        hovermode='closest',  # Ensure closest hover behavior
-        title_text="Topic Transitions and Recovery Rates",
-        font_size=12,
-        height=800,
-    )
-    # Display the plot
-    fig.show()
+def add_reaction_column(df, columns, new_column_name):
+    """
+    Add a reaction column based on a set of binary variables.
+
+    Parameters:
+        df (pd.DataFrame): The dataframe to modify.
+        columns (list of str): List of binary column names to combine.
+        new_column_name (str): Name of the new reaction column to create.
+
+    Returns:
+        pd.DataFrame: Updated dataframe with the new reaction column.
+    """
+    # Create a 'No_change' column as the inverse of all specified columns
+    df['No_change'] = ~df[columns[0]] & ~df[columns[1]]
+    
+    # Create the reaction column using the dummies
+    df[new_column_name] = pd.from_dummies(df[columns + ['No_change']])
+    
+    # Drop intermediate columns
+    df = df.drop(columns + ['No_change'], axis=1)
+    
+    return df
