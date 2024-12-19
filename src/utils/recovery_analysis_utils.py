@@ -24,10 +24,8 @@ def  get_matches(treatment: str, declines: pd.DataFrame, verbose: bool = False):
     treatment_group = declines[df_treatment]
     control_group = declines[~(df_treatment == True)]
 
-    print('Computing similarities')
     similarities = 1 - np.abs(control_group['Propensity'].values[:, None].T - treatment_group['Propensity'].values[:, None])
 
-    print('Computing matches')
     matched_index_indices = scipy.optimize.linear_sum_assignment(similarities, maximize=True)
 
     matched_indices = [(control_group.index[j], treatment_group.index[i]) for i, j in zip(*matched_index_indices)]
@@ -40,8 +38,10 @@ def preprocess_for_matching(declines: pd.DataFrame, treatment: str):
 
     declines = declines.copy().drop(columns=excluded_columns)
 
+    ZERO_DIVISION = 1e-6
+
     for col in [col for col in declines.columns if col != 'Category']:
-        declines[col] = (declines[col] - declines[col].mean()) / declines[col].std()
+        declines[col] = (declines[col] - declines[col].mean()) / (declines[col].std() + ZERO_DIVISION)
 
     declines = pd.get_dummies(data = declines, columns = ['Category'], prefix = 'Cat', drop_first = True)
     declines.rename(columns={col: col.replace(' ', '_').replace('&', '_and_') for col in declines.columns}, inplace=True)
