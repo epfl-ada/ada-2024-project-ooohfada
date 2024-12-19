@@ -302,3 +302,98 @@ def add_reaction_column(df, columns, new_column_name):
     df = df.drop(columns + ['No_change'], axis=1)
     
     return df
+
+def match_upload_frequency(df_sampled, df_videos_per_week):
+    """
+    Match declines based on upload frequency and calculate recovery rates for each bin.
+    
+    Parameters:
+        df_sampled (pd.DataFrame): The main dataframe containing sampled data.
+        df_videos_per_week (pd.DataFrame): Dataframe with weekly video information.
+    """
+    
+    # Define bins and labels for upload frequency
+    bins = [0, 0.5, 1, 2, 3, 4, 5, 10]
+    labels = ['<0.5', '0.5-1', '1-2', '2-3', '3-4', '4-5', '>5']
+
+    df = df_sampled.drop(columns=(['Mean_frequency_difference', 'Posted_more', 'Posted_less']))
+    matched_dfs = {}
+
+    df['Frequency_bin'] = pd.cut(df_videos_per_week['Videos_per_week_after'], bins=bins, labels=labels)
+
+    plot_df = pd.DataFrame(columns=['Frequency_bin', 'Recovery_rate'])
+
+    for bin_label in labels:
+        df['Is_in_bin'] = (df['Frequency_bin'] == bin_label)
+        print(f'Processing bin: {bin_label} ({df["Is_in_bin"].sum() / len(df) * 100:.2f}% of declines)')
+
+        df_dropped = df.drop(columns = ['Frequency_bin'])
+        
+        # Perform PSM for the treatment of interest
+        matches = get_matches(treatment='Is_in_bin', declines=df_dropped, verbose=False)
+
+        matched_indices_flat = [index for match in matches for index in match]
+        matched_df = df.loc[matched_indices_flat]
+
+        # Calculate recovery rate for "in bin" (True)
+        recovery_rate = matched_df.groupby('Is_in_bin')['Recovered'].mean() * 100
+
+        matched_dfs[bin_label] = matched_df
+        if True in recovery_rate.index: # Append recovery rate for the current bin
+            plot_df.loc[len(plot_df)] = [bin_label, recovery_rate[True]]
+        else:
+            plot_df.loc[len(plot_df)] = [bin_label, 0]
+            
+    return plot_df
+
+def match_video_duration(df_sampled, df_video_duration):
+        # Define bins and labels for upload frequency
+    duration_bins = [0*60, 5*60, 10*60, 15*60, 20*60, 30*60, 60*60, 120*60]
+    duration_labels = ['<5', '5-10', '10-15', '15-20', '20-30', '30-60', '>60']
+
+    df = df_sampled.copy()
+    df = df.dropna()
+
+    matched_dfs = {}
+
+    # Bin the video durations
+    df['Duration_bin'] = pd.cut(df_video_duration['Mean_duration_after'], bins=duration_bins, labels=duration_labels)
+    print(df['Duration_bin'])
+    plot_df = pd.DataFrame(columns=['Duration_bin', 'Recovery_rate'])
+
+    bin_counts = df['Duration_bin'].value_counts()
+    print("Number of samples in each bin:")
+    print(bin_counts)
+
+    for bin_label in duration_labels:
+        df['Is_in_bin_duration'] = (df['Duration_bin'] == bin_label)
+        df = df.dropna()
+        print(f'Processing bin: {bin_label}')
+
+        df_dropped = df.drop(columns = ['Duration_bin']).dropna()
+        
+
+        # Scale the data if necessary (especially for numerical columns)
+        if (df_dropped == np.inf).any().any() or (df_dropped.isna()).any().any():
+            print(f"Data contains NaN or Infinite values for {bin_label}.")
+            continue  # Skip this bin if data is problematic
+
+        df_dropped = df_dropped.loc[:, df_dropped.nunique() > 1]
+
+
+        # Perform PSM for the treatment of interest
+        matches = get_matches(treatment='Is_in_bin_duration', declines=df_dropped, verbose=False)
+
+        matched_indices_flat = [index for match in matches for index in match]
+        matched_df = df.loc[matched_indices_flat]
+
+        # Calculate recovery rate for "in bin" (True)
+        recovery_rate = matched_df.groupby('Is_in_bin_duration')['Recovered'].mean() * 100
+
+        matched_dfs[bin_label] = matched_df
+        if True in recovery_rate.index: # Append recovery rate for the current bin
+            plot_df.loc[len(plot_df)] = [bin_label, recovery_rate[True]]
+        else:
+            plot_df.loc[len(plot_df)] = [bin_label, 0]
+            
+    return plot_df
