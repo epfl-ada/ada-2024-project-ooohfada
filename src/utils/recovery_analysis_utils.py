@@ -6,7 +6,7 @@ import pickle
 from tqdm import tqdm
 import json
 
-def  _match_on(treatment: str, declines: pd.DataFrame, verbose: bool = False):
+def  get_matches(treatment: str, declines: pd.DataFrame, verbose: bool = False):
     """
     Match declines in the context of a matched observational study.
     """
@@ -110,25 +110,12 @@ def add_video_stats(df, df_videos):
 
     return df
 
-def get_matches(treatment: str, declines: pd.DataFrame, verbose: bool = False):
-    try:
-        with open(f'data/matches/{treatment}.pkl', 'rb') as f:
-            matches = pickle.load(f)
-            print(f"Matches loaded from file for treatment {treatment}.")
-    except FileNotFoundError:
-        print(f"File not found, computing the matches for treatment {treatment}...")
-        matches = _match_on(treatment, declines, verbose=verbose)
-
-        # Save the newly computed matches
-        with open(f'data/matches/{treatment}.pkl', 'wb') as f:
-            pickle.dump(matches, f)
-            print("Matches saved to file.")
-
-    return matches
-
 def perform_logistic_regression(X, y):
     # Make X and y numeric, and add a constant
+    ZERO_DIVISION = 1e-6
+
     X = X.astype(float)
+    X = (X - X.mean()) / (X.std() + ZERO_DIVISION)
     y = y.astype(float)
     X = sm.add_constant(X)
 
@@ -237,35 +224,6 @@ def merge_and_report_topic_changes(df, topic_filepath):
     print(f"{df['Topic_change'].mean() * 100:.2f}% of the channels changed topic after the start of the decline.")
     return df.drop(columns=['Decline', 'Topic_before', 'Topic_after'])
 
-def process_categorical_variables(df, columns_to_dummy, drop_first=True):
-    """
-    Transforms categorical variables into dummy variables.
-
-    Args:
-        df (pd.DataFrame): The input DataFrame.
-        columns_to_dummy (list): List of columns to convert into dummies.
-        drop_first (bool): Whether to drop the first level to avoid multicollinearity.
-
-    Returns:
-        pd.DataFrame: The DataFrame with dummy variables added.
-    """
-    return pd.get_dummies(df, columns=columns_to_dummy, drop_first=drop_first)
-
-def convert_booleans_to_integers(df, boolean_columns):
-    """
-    Converts boolean variables into integers (0 and 1).
-
-    Args:
-        df (pd.DataFrame): The input DataFrame.
-        boolean_columns (list): List of boolean columns to convert.
-
-    Returns:
-        pd.DataFrame: The DataFrame with boolean columns transformed.
-    """
-    for col in boolean_columns:
-        df[col] = df[col].astype(int)
-    return df
-
 def calculate_correlation_matrix(df, target_column, columns_to_exclude=None):
     """
     Calculates and displays the correlation matrix, sorted by correlation with a target column.
@@ -282,31 +240,6 @@ def calculate_correlation_matrix(df, target_column, columns_to_exclude=None):
         df = df.drop(columns=columns_to_exclude)
     correlation_matrix = df.corr()
     return correlation_matrix[target_column].sort_values(ascending=False)
-
-def preprocess_and_analyze(df, categorical_columns, boolean_columns, target_column, columns_to_exclude=None):
-    """
-    Preprocesses the DataFrame and computes the correlation matrix.
-
-    Args:
-        df (pd.DataFrame): The input DataFrame.
-        categorical_columns (list): List of columns to transform into dummies.
-        boolean_columns (list): List of boolean columns to transform into integers.
-        target_column (str): The column to analyze correlations with.
-        columns_to_exclude (list): Columns to exclude from correlation computation.
-
-    Returns:
-        pd.Series: Sorted correlations with the target column.
-    """
-    # Transform categorical variables
-    df_processed = process_categorical_variables(df, categorical_columns)
-
-    # Convert booleans to integers
-    df_processed = convert_booleans_to_integers(df_processed, boolean_columns)
-
-    # Calculate correlation matrix
-    correlations = calculate_correlation_matrix(df_processed, target_column, columns_to_exclude)
-
-    return correlations
 
 def build_reaction_dataframe(df_sampled, df_videos_per_week, df_video_duration):
     """

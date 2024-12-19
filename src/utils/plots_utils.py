@@ -9,10 +9,13 @@ from matplotlib import cm
 from matplotlib.colors import Normalize, to_hex
 from matplotlib.cm import ScalarMappable
 
-GREEN = '#2ca02c'
-RED = '#d62728'
+GREEN = '#004AAD'
+RED = '#FF0000'
 
-def plot_recovered_by_categories(df, filename=None):
+plt.rcParams.update({"savefig.dpi": 300})
+
+
+def plot_recovered_by_categories(df):
     plt.figure(figsize=(13, 4))
     ax = plt.subplot(1, 2, 1)
 
@@ -52,10 +55,8 @@ def plot_recovered_by_categories(df, filename=None):
     ax_right.set_yticklabels([f'{mean:.2f}%'])
     ax.legend([f'Mean over all declines', 'Not recovered', 'Recovered'], loc='lower center')
 
-    if filename:
-        # remove index name
-        counts.index.name = None
-        counts.to_csv('plot_data/' + filename, index=True)
+    counts.index.name = None
+    counts.to_csv('plot_data/' + 'reco_per_category.csv', index=True)
 
     plt.show()
 
@@ -95,6 +96,8 @@ def plot_group_distributions(df):
     plt.ylabel('Number of declines')
 
     plt.tight_layout()
+    plt.savefig('plot_data/group_distributions.png')
+
     plt.show()
 
 def plot_sampling_rates(df, seed):
@@ -134,7 +137,7 @@ def plot_treatment_effect(df, treatment: str, ax=None):
     ax.set_yticks([0, 20, 40, 60, 80, 100], ['0%', '20%', '40%', '60%', '80%', '100%'])
     ax.tick_params(axis='x', rotation=0)
 
-def plot_logit_coefficients(logit_result, title=None, ax=None, color_legend=True, filename=None):
+def plot_logit_coefficients(logit_result, title=None, ax=None, color_legend=True):
 
     if ax is None:
         ax = plt.gca()
@@ -164,8 +167,7 @@ def plot_logit_coefficients(logit_result, title=None, ax=None, color_legend=True
     if not color_legend:
         cbar.remove()
 
-    if filename:
-        plt.savefig('plot_data/' + filename, bbox_inches='tight')
+    plt.savefig('plot_data/logit_coefficients.png', bbox_inches='tight')
 
 def plot_coeffs_comparison_by_removing_no_videos_declines(results_all_declines, results_without_no_videos_declines):
     fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True, sharex=True)
@@ -197,21 +199,6 @@ def plot_distribution_by_frequency_reaction(df_post_freq, column, title):
         
     fig.suptitle(title)
     plt.tight_layout()
-
-def plot_heatmap_topics(df):
-    pivot_data = df.pivot(
-        index='Topic_before', 
-        columns='Topic_after', 
-        values='recovery_rate'
-    )
-
-    # Heatmap of the recovery rates by topic transitions
-    plt.figure(figsize=(12, 8))
-    sns.heatmap(pivot_data, annot=True, fmt=".2f", cmap='coolwarm', cbar_kws={'label': 'Recovery Rate'})
-    plt.title('Recovery Rate by Topic Transition')
-    plt.xlabel('Topic After')
-    plt.ylabel('Topic Before')
-    plt.show()
 
 def plot_horizontal_barplot(var, df, x, y):
     # Create the bar plot
@@ -357,24 +344,6 @@ def sankey_diagram(df):
 
     # Display the plot
     fig.show()
-
-def scatterplot_reaction(x, y, data, reaction):
-    sns.scatterplot(x=x, y=y, data=data)
-    plt.title(f'Upload {reaction} vs. Recovery')
-    plt.xlabel(f'Upload {reaction} (videos per week)')
-    plt.ylabel('Recovery')
-    plt.show()
-
-def kdeplot_reaction(df_true, df_false, column, reaction, xlim):
-    plt.figure(figsize=(8, 6))
-    sns.kdeplot(df_true[column], label='Recovered', fill=True, alpha=0.5)
-    sns.kdeplot(df_false[column], label='Not Recovered', fill=True, alpha=0.5)
-    plt.xlim(-xlim, xlim)
-    plt.title(f'Distribution of Video {reaction} by Recovery Status')
-    plt.xlabel('Upload {reaction} (videos per week)')
-    plt.ylabel('Density')
-    plt.legend()
-    plt.show()
 
 def barplot_reaction(y_lim_min, y_lim_max, data, reaction, x, y):
     sns.barplot(data=data, x=x, y=y, errorbar=None)
