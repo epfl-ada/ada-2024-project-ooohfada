@@ -5,6 +5,9 @@ import matplotlib.colors as mcolors
 import plotly.graph_objects as go
 import seaborn as sns
 import plotly.express as px
+from matplotlib import cm
+from matplotlib.colors import Normalize, to_hex
+from matplotlib.cm import ScalarMappable
 
 GREEN = '#2ca02c'
 RED = '#d62728'
@@ -289,8 +292,6 @@ def sankey_diagram(df):
 
     # Generate color gradient using the coolwarm colormap
     def rate_to_color(rate):
-        from matplotlib import cm
-        from matplotlib.colors import Normalize, to_hex
         cmap = cm.get_cmap('coolwarm')  # Coolwarm colormap (blue to red)
         norm = Normalize(vmin=0, vmax=1)  # Normalize based on 0-1 range
         return to_hex(cmap(norm(rate)))  # Use inverted normalized rate for color mapping
@@ -353,6 +354,7 @@ def sankey_diagram(df):
         font_size=12,
         height=800,
     )
+
     # Display the plot
     fig.show()
 
