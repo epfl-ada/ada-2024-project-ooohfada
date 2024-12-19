@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import ttest_ind
+import numpy as np
+import plotly.graph_objects as go
+import plotly.io as pio
 import datetime
 from IPython.display import clear_output
 import pandas as pd
@@ -332,3 +335,100 @@ def analyze_activity_around_bad_buzz(channel, df, bad_buzz_df, pos_p_value=-0.25
     plt.tight_layout()
     plt.subplots_adjust(hspace=0.75)
     plt.show()
+
+# Milestone 3
+
+def plot_new_detection(df_with_rgr_grouped_final, decline_events_final_sorted, channel):
+    channel_data = df_with_rgr_grouped_final.get_group(channel)
+
+    fig = go.Figure()
+
+    # Highlight decline events - add these first
+    for event in decline_events_final_sorted.get(channel , []):
+        if isinstance(event, tuple) and len(event) == 2:
+            fig.add_vrect(
+                x0=event[0][0], 
+                x1=event[0][1], 
+                fillcolor='#DFC5FE', 
+                opacity=0.5, 
+                line_width=0,
+                layer='below',
+                name='Decline event'
+            )
+        
+            
+    fig.add_trace(go.Scatter(
+            x=[None],  # Empty data to not affect the chart
+            y=[None], 
+            mode='lines', 
+            line=dict(color='#DFC5FE', width=10), 
+            name=f'Decline Event'  # Adjust legend name
+    ))
+
+    # Add growth difference trace with a specific blue color - add these after
+    fig.add_trace(go.Scatter(
+        x=channel_data['week'], 
+        y=channel_data['delta_subs'], 
+        mode='lines', 
+        name='Growth diff',
+        line=dict(color='#004AAD')  # Specify the color here
+    ))
+
+    # Add rolling growth rate trace with a specific red color
+    fig.add_trace(go.Scatter(
+        x=channel_data['week'], 
+        y=channel_data['rolling_growth_rate'], 
+        mode='lines', 
+        name='Rolling growth rate',
+        line=dict(color='#FF0000')  # Specify the color here
+    ))
+
+    # Update axes, layout, and other styling
+    fig.update_xaxes(
+        ticks='outside', 
+        tickvals=np.arange(0, 260, 10), 
+        ticktext=[str(i) for i in np.arange(0, 260, 10)]
+    )
+    fig.update_yaxes(ticks='outside')
+
+    fig.update_layout(
+        title=f'Growth diff and rolling growth rate for Lance Stewart\'s channel',
+        # center the title
+        title_x=0.5,
+        xaxis_title='Week',
+        yaxis_title='Subscribers',
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='center',
+            x=0.5,
+            bgcolor='rgba(255, 255, 255, 0.5)',
+            bordercolor='grey',
+            borderwidth=1.5
+        ),
+        template='plotly_white',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        xaxis_showgrid=False,
+        yaxis_showgrid=False,
+        yaxis_zeroline=False,
+        margin=dict(l=50, r=50, t=100, b=50),
+        xaxis_tickcolor='black',
+        yaxis_tickcolor='black',
+        autosize=False,
+        width=800,
+        height=600,
+    )
+
+    # Add a rectangle shape to create the border
+    fig.add_shape(
+        type="rect",
+        x0=0, y0=0, x1=1, y1=1,
+        xref='paper', yref='paper',
+        line=dict(color="grey", width=2)
+    )
+
+    fig.show()
+
+    pio.write_html(fig, file="plot_lancet.html", auto_open=False)
