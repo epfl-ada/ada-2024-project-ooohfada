@@ -259,7 +259,7 @@ def create_1m_plus_dataset(df_with_rgr, df_decline_events_final_sorted, verbose=
             del decline_events_1M_plus[k]
 
     # Write to CSV file
-    with open('data/1M_plus_from_declined_events.csv', 'w', newline='') as file:
+    with open('data/1M_plus_decline_events.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         # Write header
         writer.writerow(["Channel", "Event", "Duration", "Mean_Number_of_Subscribers"])
@@ -270,7 +270,7 @@ def create_1m_plus_dataset(df_with_rgr, df_decline_events_final_sorted, verbose=
                 writer.writerow([channel, event, end_week, mean_subscribers])
 
     if verbose:
-        print('1M Plus dataset created and saved to data/1M_plus_from_declined_events.csv \n')
+        print('1M Plus dataset created and saved to data/1M_plus_decline_events.csv \n')
 
 if __name__ == '__main__':
     create_decline_events_datasets(verbose=True)
