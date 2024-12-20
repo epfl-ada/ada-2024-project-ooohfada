@@ -4,7 +4,7 @@ from tqdm import tqdm
 from time import time
 import os.path
 
-from dataloader_functions import *
+from src.data.dataloader_functions import *
 
 # To get the path to data/ regardless of where this script is called from :
 
