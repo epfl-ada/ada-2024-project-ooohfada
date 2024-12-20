@@ -69,13 +69,6 @@ def create_tags_dataframe(decline_events, videos):
     
     return df_tags
 
-def create_small_dataframe(df_tags):
-    df_small = df_tags.head(100)
-    df_small['Tokens'] = None
-    for index, row in tqdm(df_small.iterrows(), total=df_small.shape[0]):
-        df_small.at[index, 'Tokens'] = preprocess_str(row['Tags_combined'])
-    return df_small
-
 def create_big_dataframe(df_tags):
     print("Tokenizing and lemmatizing tags")
     df_tags['Tokens'] = None
