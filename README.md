@@ -100,6 +100,7 @@ In the aim of using an **on-device LLM** to analyse the metadata of videos that 
 ## Contributions within the team
 
 - **Martina**: Worked on the initial analysis of declines, identification of the decline events, the analysis of the recovery rates of the Youtubers that changed their posting frequency and mean video duration, and the repository structure.
+
 - **Nathan**: Worked on the Propensity Score Matching analysis, the recoveery analysis, the analysis of the recovery rates of the Youtubers that changed their posting frequency and mean video duration, and the repository structure.
 - **Eva**: Worked on initial analysis of declines, NLP for topic identification, topic changes analysis.
 - **Nicolas**: Worked on the identification of the decline events, the LLM for the analysis of the video titles, the analysis of the proportions and recovery rates of the Youtubers with more than 1 million subscribers depending on strategy applied, and the repository structure.
@@ -142,25 +143,26 @@ ADA-2024-PROJECT-OOOHFADA/
 
 ## How to execute the code
 
-1. Clone the repository:
+**1.** Clone the repository:
 ```bash
-git clone 
-cd ADA-2024-PROJECT-OOOHFADA
+git clone https://github.com/epfl-ada/ada-2024-project-ooohfada.git 
+cd ada-2024-project-ooohfada
 ```
-2. Download and Install [OLLAMA](https://ollama.com)  
+**2.** Download and Install [OLLAMA](https://ollama.com)  
 :warning: Make sure the app is running in background before creating the virtual environment
-3. Create a virtual environment and install the required packages using the `pip_requirements.txt` file
+**3.** Create a virtual environment and install the required packages using the `pip_requirements.txt` file
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r pip_requirements.txt
 ```
-4. Set up the LLM by pulling [MISTRAL model](https://ollama.com/library/mistral) from the OLLAMA API
+**4.** Set up the LLM by pulling [MISTRAL model](https://ollama.com/library/mistral) from the OLLAMA API
 ```bash
 ollama pull mistral
 ```
-5. Download the dataset from the [ADA 2024 YouNiverse Kaggle page](https://zenodo-org.translate.goog/records/4650046?_x_tr_sl=en&_x_tr_tl=fr&_x_tr_hl=fr&_x_tr_pto=sc) and place it in the `data/` folder
-6. Run the results.ipynb notebook to generate all the results and plots  
+**5.** Download the dataset from the [ADA 2024 YouNiverse Kaggle page](https://zenodo-org.translate.goog/records/4650046?_x_tr_sl=en&_x_tr_tl=fr&_x_tr_hl=fr&_x_tr_pto=sc) and place it in the `data/` folder  
+
+**6.** Run the `results.ipynb` notebook to generate all the results and plots  
    :warning: The notebook is quite long and some cells take a while (many hours) to run (precised above the cells)
    :warning: The notebook is also memory intensive, make sure you have enough RAM to run it (32GB recommended)
 
