@@ -11,15 +11,12 @@ from tqdm import tqdm
 from gensim import corpora
 import string
 from gensim.models import CoherenceModel
+from src.utils.recovery_analysis_utils import str_to_list
 
 CASEFOLD = False
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
 
-def str_to_list(s):
-    if isinstance(s, str):
-        return [item.strip() for item in s.split(',') if item.strip()]
-    return []
 
 def preprocess_str(s):
     if not isinstance(s, str) or not s.strip():  # Cases where s = None
@@ -69,21 +66,10 @@ def create_tags_dataframe(decline_events, videos):
     
     return df_tags
 
-def create_big_dataframe(df_tags):
-    print("Tokenizing and lemmatizing tags")
-    df_tags['Tokens'] = None
-    for index, row in tqdm(df_tags.iterrows(), total=df_tags.shape[0]):
-        df_tags.at[index, 'Tokens'] = preprocess_str(row['Tags_combined'])
-    return copy.deepcopy(df_tags)
-
-def create_dictionary_and_corpus(df_small):
-    dictionary = corpora.Dictionary(df_small['Tokens'])
-    corpus = [dictionary.doc2bow(token_list) for token_list in df_small['Tokens']]
+def create_dictionary_and_corpus(df_tags):
+    dictionary = corpora.Dictionary(df_tags['Tokens'])
+    corpus = [dictionary.doc2bow(token_list) for token_list in df_tags['Tokens']]
     return dictionary, corpus
-
-def train_lda_model(corpus, dictionary, num_topics=55, passes=15):
-    lda = ldamodel.LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=passes)
-    return lda
 
 def assign_dominant_topic(tokens, lda_model, dictionary):
     if not tokens or not isinstance(tokens, list):
@@ -94,13 +80,6 @@ def assign_dominant_topic(tokens, lda_model, dictionary):
         dominant_topic, prob = max(topic_probs, key=lambda x: x[1])
         return dominant_topic, prob
     return None, None
-
-def analyze_topics(df_small, lda, dictionary):
-    df_small['Dominant_Topic'], df_small['Topic_Probability'] = zip(
-        *df_small['Tokens'].apply(lambda tokens: assign_dominant_topic(tokens, lda, dictionary))
-    )
-    df_small = df_small.dropna(subset=['Tokens', 'Dominant_Topic'])
-    return df_small
 
 def create_pivot_table(df_small):
     df_pivot = df_small.pivot_table(
@@ -138,35 +117,3 @@ def calculate_coherence(lda, df_small, dictionary):
     coherence_model_lda = CoherenceModel(model=lda, texts=df_small['Tokens'], dictionary=dictionary, coherence='c_v')
     coherence_lda = coherence_model_lda.get_coherence()
     return coherence_lda
-
-def main():
-    decline_events, videos = load_data()
-    decline_events = process_data(decline_events)
-    df_tags = create_tags_dataframe(decline_events, videos)
-    
-    df_small = create_small_dataframe(df_tags)
-    dictionary, corpus = create_dictionary_and_corpus(df_small)
-    lda = train_lda_model(corpus, dictionary)
-    topics = lda.print_topics(num_words=9)
-    for topic in topics:
-        print(topic)
-    df_small = analyze_topics(df_small, lda, dictionary)
-    df_pivot = create_pivot_table(df_small)
-    df_pivot = detect_changes(df_pivot)
-    coherence_lda = calculate_coherence(lda, df_small, dictionary)
-    print(f'Coherence Score: {coherence_lda}')
-    
-    df_big = create_big_dataframe(df_tags)
-    dictionary_big, corpus_big = create_dictionary_and_corpus(df_big)
-    lda_big = train_lda_model(corpus_big, dictionary_big)
-    topics_big = lda_big.print_topics(num_words=9)
-    for topic in topics_big:
-        print(topic)
-    df_big = analyze_topics(df_big, lda_big, dictionary_big)
-    df_pivot_big = create_pivot_table(df_big)
-    df_pivot_big = detect_changes(df_pivot_big)
-    coherence_lda_big = calculate_coherence(lda_big, df_big, dictionary_big)
-    print(f'Coherence Score: {coherence_lda_big}')
-
-if __name__ == "__main__":
-    main()
