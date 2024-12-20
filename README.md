@@ -4,21 +4,27 @@
 
 ## Abstract
 
-In this project, we take on the role of **community managers** helping a YouTuber recover from a recent popularity crisis. May it be from a big controversy or a simple popularity decline, our goal is to **develop a data-driven strategy for navigating the aftermath of public disinterest using insights from YouTube’s ecosystem**. Drawing on patterns from previous YouTuber experiences, we’ll analyse key metrics— such as channel type, initial popularity, posting frequency—to offer tailored strategies for re-engagement. Should they change their posting strategy ? Wait a specific period before posting new content? In case of big controversies, should they issue an apology video? Our recommendations will not be based on the cause of their decline but on optimal tactics for handling its impact.
+In this project, we take on the role of **community managers** helping a YouTuber recover from a recent audience engagement crisis. May it be from a big controversy or a simple popularity decline, our goal is to **develop a data-driven strategy for navigating the aftermath of public disinterest using insights from YouTube’s ecosystem**. Drawing on patterns from previous YouTuber experiences, we’ll analyse key metrics— such as channel type, initial popularity, posting frequency—to offer tailored strategies for re-engagement. Should they change their posting strategy ? Wait a specific period before posting new content? In case of big controversies, should they issue an apology video? Our recommendations will not be based on the cause of their decline but on optimal tactics for handling its impact.
 
 Our motivation stems from the spread of **online backlash**, impacting creators on YouTube and other platforms. We aim to provide practical insights for creators facing a **decline**, helping them make informed decisions about their next steps to rebuild audience trust or strategically embrace controversy if advantageous.
 
 ## Research Questions
 
-- **How do we define decline for Youtubers ?**
+- **How do we define decline for Youtubers ? How do we define a recovery ?**
 - **Is a Youtube channel category affecting the effective response strategies after a decline?**
-- **What timing and content strategies are best for re-engagement following public backlash?**
+- **What timing and content strategies are best for re-engagement following public backlash? Should you change your posting strategy?**
 - **In the exact case of a ‘bad buzz’, how to define it using Youtuber statistics? Are apology videos really useful?**
 
 ## Methods
 
 We chose not to explore another dataset, considering the size of YouNiverse.
 We used the following methods:
+- Latent Dirichlet Allocation (LDA)
+- Large Language Model (LLM)
+- Pearson's Correlation
+- Logistic Regression
+- Propensity Score Matching
+- Statistical analysis
 
 ### Before any data exploration, preprocessing of the used dataframes in the Youniverse dataset
 
@@ -39,14 +45,47 @@ To do so, we followed the below process:
   - **First attempt**: look for losses of subs, as we assumed that it was the general consequence of a bad buzz. We were able to conclude that a Youtube channel will rarely ‘lose’ subscribers due to the increasing traffic on the platform.
   - **Second attempt**: we used reduction or stagnation of growth coefficient of subscribers. We were able to graphically compare the delta subs to the rolling growth average of the growth coefficient and determine the moments where both diverged.
 
-However, the bad buzz dataset containing only around 40 Youtubers, we were afraid that it would not allow us to pursue ML techniques (regression, mapping..). Therefore, we made the decision to open up our subject and tackle **“viewership decline"** instead of only big controversy, which will be tackled in a separate alternative discussion in P3.
+However, the bad buzz dataset containing only around 40 Youtubers, we were afraid that it would not allow us to pursue ML techniques (regression, mapping..). Therefore, we made the decision to open up our subject and tackle **“viewership decline"** instead of only big controversy.
 
-The following analysis was performed on the dataset, to prepare for P3:
+The following analysis was performed:
 
 - General and **visual overview** of the whole dataset through the prism of viewership declines
 - For each decline in growth, observe around those timestamps what was happening concerning like/ratios, views, activities (number of posted videos) to see if any correlation could be found (using p-values...), which could lead to a pertinent ML analysis.
 
-### LLMs
+## Analysis of the declines
+### Definition of a decline and a recovery
+#### Decline
+Since very few Youtube channels actually face a loss of subscribers, we decided to look for **slowdowns in the growth rate** of subscribers in order to detect declines. We used the rolling growth average as a baseline to look for periods of time where the actual growth is below the rollig averagge for more than 8 consecutive weeks and/or there is a growth difference greater than 80%.
+#### Recovery
+We decided to consider a recovery as successful if it happens within 16 weeks after the start of the decline
+
+### Factors to analyze
+- Channel categories
+- Number of views and subscribers
+- Upload frequecy
+- Video Duration
+
+### Reactions to a decline
+In this part of the project, we used **Propensity Score Matching** to ensure fair comparisons between the different strategies and to see which one yields the best recovery rate. We also performed **t-tests** to see if the observed differences in recovery rates were statistically significant.
+
+#### Posting frequency
+We tried to see if it is better for a youtuber to post less, keep uploading the same content or be more active after a decline. 
+
+#### Video Duration
+Similarly as for the posting frequency, we made a distinction between three possible strategies: posting shorter videos, longer videos, or videos of the same length.
+
+#### Topic Change
+We also investigated to see if a topic transition could be beneficial for Youtubers facing a decline. In order to identify the thematics of the youtube channels before and after their declines, we used the **Latent Dirichlet Allocation** to distinguish 20 topics of 15 words among all the tags of the videos and we then used a **Large Language Model** to assign a title to each topic. With this categorization, we were able to identify the channels that changed the topic of their videos after a decline and we analyzed the recovery rate of these videos.
+
+## Big Youtubers in a Crisis
+In this part of the project, the analysis is focused on the Youtubers with more than **1 million subscribers**. We started by comparing their recovery rates with the rest of the youtubers, and we then proceeded with an analysis of the video titles with the **Large Language Model** **Mistral** from the **OLLAMA** project in order to see if each video belongs to the following categories:
+- Apology videos
+- Videos addressing the decline
+- Comeback announcements
+- Break announcements
+- Collaboration videos
+- Clickbait videos
+We then compared the effects of these different strategies by leveraging **Propensity Score Matching** one more time.
 
 In the aim of using an **on-device LLM** to analyse the metadata of videos that follow a popularity crisis, we applied a special treatment to the large `yt_metadata_en.json` dataset, since it contains the title and description of all crawled videos. To make it usable, we:
 
@@ -56,9 +95,8 @@ In the aim of using an **on-device LLM** to analyse the metadata of videos that 
 - deleted the rows that contained missing values.
 - kept track of what channel appeared in each chunk in `channel_chunk_dict.json` to make them more accessible.
 
-Videos title and description will be used as input to the LLM to detect potential **apology videos** in the alternative discussion about bad buzz. On a broader aspect, it will also be used to identify potential similarities between videos from channels which recovered from popularity decrease and others that did not manage to do so.
 
-## Proposed timeline and organisation within the team
+## Timeline and organisation within the team
 
 ### Week 1 (18/11 - 24/11)
 
