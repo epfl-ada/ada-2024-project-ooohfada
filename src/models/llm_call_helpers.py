@@ -1,5 +1,8 @@
 import ollama
-import pandas as pd
+from tqdm import tqdm
+
+GLOBAL_CONTEXT = "You are analyzing YouTube videos to determine how creators handle a decline in their channel popularity. \n The video is analyzed based on its title. Your task is to answer the given specific question."
+TOPIC_CONTEXT = "You are analyzing YouTube channels to determine the topic based on the distribution of the 15 main tokens found with Latent Dirichlet Allocation (LDA). Your task is to identify the name of the topic based on the given distribution."
 
 def llm_pull(model):
     """
@@ -10,94 +13,213 @@ def llm_pull(model):
     """
     ollama.pull(model)
 
-def llm_call(messages, model='mistral'):
+def query_ollama(prompt, model="mistral:latest"):
     """
-    Calls the model with the given messages
+    Query the Ollama-hosted model locally
 
     Parameters:
-    messages (list): A list of dictionaries containing the role and content of each message
-    model (str): The name of the model to call
+    prompt (str): The prompt to query the model with
+    model (str): The name of the model to query
+
+    Returns:
+    str: The response from the model
+
+    Raises:
+    RuntimeError: If an error occurs while querying the model
     """
+    try:
+        response = ollama.generate(model=model, prompt=prompt)
+        raw_response = response.get('response')
+        clean_response = raw_response.split()[0].replace(".", "").replace(",", "") # Keep only the first word and delete any ponctuation
+        return clean_response
+    except Exception as e:
+        raise RuntimeError(f"Error querying the local model: {e}")
 
-    # Check if the model is pulled
-    if model not in ollama.models():
-        llm_pull(model)
+def create_prompt(context, title, question):
+    """
+    Construct a prompt with context, video details, and a specific question.
 
-    response = ollama.chat(
-        model = model,
-        messages = messages,
-        stream = False
+    Parameters:
+    context (str): The context of the question
+    title (str): The title of the video
+    question (str): The question to ask
+
+    Returns:
+    str: The constructed prompt
+    """
+    return (
+        f"Context:\n"
+        f"{context}\n\n"
+        f"Video Title:\n"
+        f"{title}\n\n"
+        f"Question:\n"
+        f"{question}\n\n"
+        f"Answer with 'True' or 'False' only."
     )
-    return response['message']['content']
 
-def create_prompt_content(title, description):
+def create_prompt_topic(context, main_tokens_distribution):
     """
-    Create a content object from the given title and description
+    Construct a prompt with context and the distribution of the 15 main tokens found with Latent Dirichlet Allocation (LDA)
+
+    Parameters:
+    context (str): The context of the question
+    main_tokens_distribution: The distribution of the 15 main tokens found with LDA 
+
+    Returns:
+    str: The constructed prompt
+    """
+    return (
+        f"Context:\n"
+        f"{context}\n\n"
+        f"Main Tokens Distribution:\n"
+        f"{main_tokens_distribution}\n\n"
+        f"Output only the name of the topic without any sentences (1-2 words)."
+    )
+
+def apology_video(title):
+    """
+    Check whether the model identifies a video as an apology video from the given title
 
     Parameters:
     title (str): The title of the video
-    description (str): The description of the video
     """
 
-    prompt = {'Using the following title and description, predict whether the video is an apology video: \n Title: ' + title + '\n Description: ' + description + '\n Answer by True or False.'}
+    question = "Does the title explicitly convey an apology or include language typically associated with taking responsibility, expressing regret, or asking for forgiveness?"
 
-    return prompt
+    return query_ollama(create_prompt(GLOBAL_CONTEXT, title, question))
 
-def apology_video(title, description):
+def address_decline(title):
     """
-    Check whether the model identifies a video as an apology video from the given title and description
+    Check whether the model identifies a video as addressing a decline in channel popularity from the given title
 
     Parameters:
     title (str): The title of the video
-    description (str): The description of the video
     """
 
-    messages = [
-        {
-            'role': 'user',
-            'content': create_prompt_content(title, description)
-        },
-    ]
+    question = "Does the title indicate that the creator is addressing a decline in their channel popularity, such as acknowledging a decrease in views, subscribers, or engagement?"
 
-    response = llm_call(messages)
-    return response['content']
+    return query_ollama(create_prompt(GLOBAL_CONTEXT, title, question))
 
-def apology_in_week(channel_id, week_index, n=None):
+def announced_comeback(title):
     """
-    Check whether the model finds an apology video in the n next videos of a channel, starting from a given week
-    If n is None, the model checks all the videos from the week_index
+    Check whether the model identifies a video as announcing a comeback from the given title
 
     Parameters:
-    channel_id (str): The id of the channel to check
-    week_index (int): The index of the week to check
-    n (int): The number of videos to check
+    title (str): The title of the video
     """
 
-    # TODO: find the n next videos title and description of the channel starting from the week_index, from chunks
-    title = 'title'
-    description = 'description'
+    question = "Does the title suggest that the creator is announcing a comeback, return, or new direction for their channel, such as using phrases like 'I'm back,' 'returning,' or 'new chapter'?"
 
-    apology_found = False
+    return query_ollama(create_prompt(GLOBAL_CONTEXT, title, question))
 
-    for i in range(n):
-        response = apology_video(title, description)
-        if response == True:
-            print(f'Apology video found in {i}th video after the week {week_index}')
-            apology_found = True
-            break
-    
-    return apology_found
-
-
-def load_video_metadata(usecols):
+def announced_break(title):
     """
-    Load the video metadata from the file and return the first n_first_rows
+    Check whether the model identifies a video as announcing a break from the given title
+
     Parameters:
-    filename (str): the name of the file to load
-    n_first_rows (int): the number of rows to load
-    Return:
-    df (pd.DataFrame): the first n_first_rows of the file
+    title (str): The title of the video
     """
+
+    question = "Does the title suggest that the creator is announcing a break, hiatus, or temporary pause in content creation, such as using phrases like 'taking a break,' 'on hiatus,' or 'need time off'?"
+
+    return query_ollama(create_prompt(GLOBAL_CONTEXT, title, question))
+
+def featuring_another_creator(title):
+    """
+    Check whether the model identifies a video as featuring another creator from the given title
+
+    Parameters:
+    title (str): The title of the video
+    """
+
+    question = "Does the title mention or suggest that the video features another creator, such as a collaboration, guest appearance, or interview?"
+
+    return query_ollama(create_prompt(GLOBAL_CONTEXT, title, question))
+
+def clickbait(title):
+    """
+    Check whether the model identifies a video as clickbait from the given title
+
+    Parameters:
+    title (str): The title of the video
+    """
+
+    question = "Does the title appear to use clickbait techniques to attract viewers, such as exagerated use of caps, misleading or exaggerated claims, sensational language, or incomplete information?"
+
+    return query_ollama(create_prompt(GLOBAL_CONTEXT, title, question))
+
+def apply_llm_detection(videos, verbose = True):
+    """
+    Apply the LLM detection functions to a DataFrame of video titles
     
-    df_video_metadata = pd.read_csv(f'./../../data/video_metadata.csv', usecols=usecols)
-    return df_video_metadata
+    Parameters:
+    videos (pd.DataFrame): A DataFrame containing video titles
+    
+    Returns:
+    pd.DataFrame: A DataFrame with the detection results appended
+    """
+
+    if verbose:
+        print("Applying LLM detection functions ...")
+
+    tqdm.pandas()
+
+    videos['apology'] = videos['title'].progress_apply(lambda x: apology_video(x))
+    videos['decline_addressed'] = videos['title'].progress_apply(lambda x: address_decline(x))
+    videos['comeback'] = videos['title'].progress_apply(lambda x: announced_comeback(x))
+    videos['break'] = videos['title'].progress_apply(lambda x: announced_break(x))
+    videos['featuring'] = videos['title'].progress_apply(lambda x: featuring_another_creator(x))
+    videos['clickbait'] = videos['title'].progress_apply(lambda x: clickbait(x))
+
+    if verbose:
+        print("LLM detection functions applied.\n")
+
+    if verbose:
+        print("Saving the results ...")
+
+    videos.to_csv('data/llm_strategies.csv')
+
+    if verbose:
+        print("Results saved to 'data/llm_strategies.csv'.\n")
+
+def clean_strategies_results(results):
+    if results == True or results == 'True':
+        return int(1)
+    elif results == False or results == 'False':
+        return int(0)
+    else:
+        return None
+
+def generate_topic_name(main_tokens_distribution):
+    """
+    Identify the topic name based on the distribution of the 15 main tokens found with Latent Dirichlet Allocation (LDA)
+
+    Parameters:
+    main_tokens_distribution: The distribution of the 15 main tokens found with LDA 
+
+    Returns:
+    str: The topic name generated by the LLM
+    """
+
+    return query_ollama(create_prompt_topic(TOPIC_CONTEXT, main_tokens_distribution))
+
+def __main__():
+
+    # Test the functions
+    title = "I'm Sorry."
+    print(apology_video(title))
+
+    title = "My Channel Update."
+    print(address_decline(title))
+
+    title = "I'm Back!"
+    print(announced_comeback(title))
+
+    title = "Collab with My Friend!"
+    print(featuring_another_creator(title))
+
+    title = "You Won't Believe What Happened!"
+    print(clickbait(title))
+
+if __name__ == "__main__":
+    __main__()
