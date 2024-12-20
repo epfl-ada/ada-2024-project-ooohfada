@@ -6,8 +6,10 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import datetime
 from IPython.display import clear_output
-import tqdm
+from tqdm import tqdm
 import pandas as pd
+from PIL import Image
+import io
 
 from src.data.dataloader_functions import load_processed_data
 
@@ -639,7 +641,17 @@ def plot_new_detection(df_with_rgr_grouped_final, decline_events_final_sorted, c
         line=dict(color="grey", width=2)
     )
 
-    fig.show()
-
-    # Save the plot as an HTML file
+    # Save the Plotly plot as an HTML file
     pio.write_html(fig, file="plot_data/plot_lancet.html", auto_open=False)
+
+    # Convert and display the corresponding static plot (not interactive)
+    image_bytes = fig.to_image(format="png", width=1200, height=800, scale=1)
+
+    # Display the image
+    image = Image.open(io.BytesIO(image_bytes))
+
+    plt.figure(figsize=(15, 10))
+    plt.imshow(image)
+    plt.axis('off')
+    plt.show()
+
