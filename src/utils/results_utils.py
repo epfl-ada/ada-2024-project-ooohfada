@@ -4,6 +4,7 @@ from scipy.stats import ttest_ind
 import datetime
 from IPython.display import clear_output
 import pandas as pd
+from tqdm import tqdm
 
 # I. Load the data
 

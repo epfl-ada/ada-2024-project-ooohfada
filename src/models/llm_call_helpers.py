@@ -1,5 +1,5 @@
 import ollama
-import pandas as pd
+from tqdm import tqdm
 
 GLOBAL_CONTEXT = "You are analyzing YouTube videos to determine how creators handle a decline in their channel popularity. \n The video is analyzed based on its title. Your task is to answer the given specific question."
 TOPIC_CONTEXT = "You are analyzing YouTube channels to determine the topic based on the distribution of the 15 main tokens found with Latent Dirichlet Allocation (LDA). Your task is to identify the name of the topic based on the given distribution."
@@ -147,6 +147,48 @@ def clickbait(title):
     question = "Does the title appear to use clickbait techniques to attract viewers, such as exagerated use of caps, misleading or exaggerated claims, sensational language, or incomplete information?"
 
     return query_ollama(create_prompt(GLOBAL_CONTEXT, title, question))
+
+def apply_llm_detection(videos, verbose = True):
+    """
+    Apply the LLM detection functions to a DataFrame of video titles
+    
+    Parameters:
+    videos (pd.DataFrame): A DataFrame containing video titles
+    
+    Returns:
+    pd.DataFrame: A DataFrame with the detection results appended
+    """
+
+    if verbose:
+        print("Applying LLM detection functions ...")
+
+    tqdm.pandas()
+
+    videos['apology'] = videos['title'].progress_apply(lambda x: apology_video(x))
+    videos['decline_addressed'] = videos['title'].progress_apply(lambda x: address_decline(x))
+    videos['comeback'] = videos['title'].progress_apply(lambda x: announced_comeback(x))
+    videos['break'] = videos['title'].progress_apply(lambda x: announced_break(x))
+    videos['featuring'] = videos['title'].progress_apply(lambda x: featuring_another_creator(x))
+    videos['clickbait'] = videos['title'].progress_apply(lambda x: clickbait(x))
+
+    if verbose:
+        print("LLM detection functions applied.\n")
+
+    if verbose:
+        print("Saving the results ...")
+
+    videos.to_csv('data/llm_strategies.csv')
+
+    if verbose:
+        print("Results saved to 'data/llm_strategies.csv'.\n")
+
+def clean_strategies_results(results):
+    if results == True or results == 'True':
+        return int(1)
+    elif results == False or results == 'False':
+        return int(0)
+    else:
+        return None
 
 def generate_topic_name(main_tokens_distribution):
     """
